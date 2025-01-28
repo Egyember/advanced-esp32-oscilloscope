@@ -1,0 +1,6 @@
+key,type,encoding,value
+wifi_auth,namespace,,
+ssid,data,string,asd
+passwd,data,string,Zsombika70671
+authmetod,data,u8,3
+channel,data,u8,10
