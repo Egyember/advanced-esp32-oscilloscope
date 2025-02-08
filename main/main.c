@@ -28,14 +28,7 @@
 #define COMPORT 40001
 
 const static uint8_t channelConfig[] = {ADC_CHANNEL_0, ADC_CHANNEL_3,ADC_CHANNEL_4,ADC_CHANNEL_5};
-enum modes {
-	CONTINUOUS,
-	ONESHOT_HIGH,
-	ONESHOT_LOW,
-};
 struct __attribute__((packed)) scopeConf {
-	// enum modes, uint8_t  mode; this is a C23 feature
-	enum modes __attribute__((packed)) mode;
 	uint8_t channels;
 	uint32_t sampleRate; // expected ADC sampling frequency in Hz.
 	uint32_t duration;   // in ms
@@ -234,7 +227,15 @@ WIFISETUP:
 			.format = ADC_DIGI_OUTPUT_FORMAT_TYPE1,
 		};
 		ESP_ERROR_CHECK(adc_continuous_config(adcHandler, &adcConfig));
-
+		adc_continuous_start(adcHandler);
+		uint8_t *readbuffer = malloc(sizeof(uint8_t)*frameSize); //1448 is the max tcp data segment size
+		uint32_t readData;
+		do{
+			adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration);
+		}while(write(fd, readbuffer, readData)>0);
+		free(readbuffer);
+		adc_continuous_stop(adcHandler);
+		close(fd);
 		ESP_ERROR_CHECK(adc_continuous_deinit(adcHandler));
 		free(adcPatterns);
 	};
