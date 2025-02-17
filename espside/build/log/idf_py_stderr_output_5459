@@ -1,0 +1,9 @@
+CMake Error at /opt/esp-idf/tools/cmake/build.cmake:268 (message):
+  Failed to resolve component 'commands'.
+Call Stack (most recent call first):
+  /opt/esp-idf/tools/cmake/build.cmake:304 (__build_resolve_and_add_req)
+  /opt/esp-idf/tools/cmake/build.cmake:607 (__build_expand_requirements)
+  /opt/esp-idf/tools/cmake/project.cmake:710 (idf_build_process)
+  CMakeLists.txt:8 (project)
+
+

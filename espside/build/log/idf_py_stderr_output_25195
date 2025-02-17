@@ -1,0 +1,52 @@
+[0;33m--- esp-idf-monitor 1.5.0 on /dev/ttyUSB0 115200[0m
+[0;33m--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H[0m
+[0;33m--- 0x40080400: _init at ??:?
+[0m
+[1;31m--- esp_idf_monitor (1.5.0) - ESP-IDF Monitor tool
+--- based on miniterm from pySerial
+---
+--- Ctrl+]   Exit program
+--- Ctrl+T   Menu escape key, followed by:
+--- Menu keys:
+---    Ctrl+T         Send the menu character itself to remote
+---    Ctrl+]         Send the exit character itself to remote
+---    Ctrl+R         Reset target board via RTS line
+---    Ctrl+F         Build & flash project
+---    Ctrl+A (or A)  Build & flash app only
+---    Ctrl+Y         Toggle output display
+---    Ctrl+L         Toggle saving output into file
+---    Ctrl+I (or I)  Toggle printing timestamps
+---    Ctrl+P         Reset target into bootloader via the DTR/RTS lines
+---    Ctrl+X (or X)  Exit program[0m
+[0;33m--- Running /home/zsombor/.espressif/python_env/idf5.3_py3.13_env/bin/python /opt/esp-idf/tools/idf.py -p /dev/ttyUSB0 app-flash...[0m
+info: INFO: Symbol IDF_TARGET_LINUX defined in multiple locations (see below). Please check if this is a correct behavior or a random name match:
+    /opt/esp-idf/Kconfig:162
+    /opt/esp-idf/Kconfig:78
+CMake Deprecation Warning at /opt/esp-idf/components/mbedtls/mbedtls/CMakeLists.txt:21 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[0;33m--- Warning: Failed to decode multiple lines in a row. Try checking the baud rate and XTAL frequency setting in menuconfig[0m
+[1;31m--- Error: device reports readiness to read but returned no data (device disconnected or multiple access on port?)[0m
+[0;33m--- Waiting for the device to reconnect[0mE
