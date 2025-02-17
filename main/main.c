@@ -23,12 +23,10 @@
 
 #define WIFIDONEBIT BIT0
 #define WIFIFAILED BIT1
-#define NUMBEROFCON 14
-
 #define COMPORT 40001
 
 const static uint8_t channelConfig[] = {ADC_CHANNEL_0, ADC_CHANNEL_3,ADC_CHANNEL_4,ADC_CHANNEL_5};
-struct __attribute__((packed)) scopeConf {
+struct  scopeConf {
 	uint8_t channels;
 	uint32_t sampleRate; // expected ADC sampling frequency in Hz.
 	uint32_t duration;   // in ms
