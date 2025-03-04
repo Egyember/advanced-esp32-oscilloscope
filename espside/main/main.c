@@ -1,5 +1,6 @@
 #include "broadcaster.h"
 #include "btconfig.h"
+#include "cc.h"
 #include "esp_adc/adc_continuous.h"
 #include "esp_err.h"
 #include "esp_event.h"
@@ -31,6 +32,7 @@ struct  scopeConf {
 	uint32_t sampleRate; // expected ADC sampling frequency in Hz.
 	uint32_t duration;   // in ms
 };
+#define CONFREADBUFFER (sizeof(uint32_t)*2 + sizeof(uint8_t))
 
 static const char *MAIN_TAG = "MAIN";
 static const char *WIFI_TAG = "MAIN/WIFI";
@@ -102,6 +104,31 @@ void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, 
 	}
 };
 
+int readConfig(int soc, struct scopeConf *config){
+	int avalable = -1;
+	do {
+		if (avalable != -1) {
+			vTaskDelay(100 / portTICK_PERIOD_MS);
+		};
+		int err = lwip_ioctl(soc, FIONREAD, &avalable);
+		if(err < 0) {
+			ESP_LOGE(MAIN_TAG, "ioctl failed errno: %s", strerror(errno));
+			return -1;
+		};
+	}while (avalable >= CONFREADBUFFER);
+	uint8_t buffer[CONFREADBUFFER];
+	int err = read(soc, &buffer, CONFREADBUFFER);
+	if(err < 0) {
+		ESP_LOGE(MAIN_TAG, "read failed");
+		return -1;
+	};
+	config->channels = buffer[0];
+	config->duration = htonl(*((uint32_t *)(&buffer[1]))); 
+	config->sampleRate = htonl(*((uint32_t *)(&buffer[5]))); 
+	return 0;
+
+};
+
 void app_main(void) {
 	ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -127,7 +154,7 @@ void app_main(void) {
 	ESP_ERROR_CHECK(
 	    esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, ip_event_handler, netint, &ipeventh));
 
-	wifi_config_t wificonfig = {};
+	wifi_config_t wificonfig = {0};
 WIFISETUP:
 	// reading config from nvs
 	nvs_handle_t nvsHandle;
@@ -195,7 +222,7 @@ WIFISETUP:
 		socklen_t inlen = sizeof(inaddr);
 		int fd = accept(soc, (struct sockaddr *)&inaddr, &inlen);
 		struct scopeConf config;
-		if(read(fd, &config, sizeof(struct scopeConf)) != 0) {
+		if(readConfig(fd, &config) < 0) {
 			close(fd);
 			ESP_LOGW(MAIN_TAG, "reading in confing failed");
 			continue;
