@@ -2,8 +2,14 @@
 #define MAINTYPES
 
 #include <addrlist.h>
-struct state{
+#include <espsiteTypes.h>
+#include <devices.h>
+#include <stdint.h>
+
+
+struct state {
 	addrllroot *addrRoot;
+	devices devices;
 };
 typedef struct state *Pstate;
 

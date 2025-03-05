@@ -13,11 +13,14 @@ typedef struct addrll {
 	struct sockaddr addr;
 	time_t lastseen;
 	bool conneted;
+	int fd;
 	struct addrll *next;
 	struct addrll *prev;
 } addrll;
 
 addrllroot *addrll_init();
-int addrll_update(addrllroot *addrll, struct sockaddr addr);
+
+int addrl_update(addrllroot *addrll, struct sockaddr addr);
 int addrll_deletOld(addrllroot *addrll);
+void *scanForEsp(addrllroot *root);
 #endif

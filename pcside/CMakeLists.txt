@@ -5,17 +5,19 @@ project(
 	VERSION 0.0.1
 	LANGUAGES C)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "") # hack to make it work
-add_compile_options( -Wall -O2 --std=gnu17 -g -pthread)
+add_compile_options( -Wall -O2 --std=gnu17 -g)
 add_executable(main main.c)
 target_include_directories(main PUBLIC
 	"${PROJECT_SOURCE_DIR}/include"
 )
 add_subdirectory(addrlist)
 add_subdirectory(rayguiimpl)
+add_subdirectory(devices)
 target_link_libraries(main PRIVATE
 	pthread
 	raylib
 	rayguiimpl
 	addrlist
+	devices
 	m
 )

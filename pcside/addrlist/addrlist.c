@@ -1,8 +1,14 @@
 #include "addrlist.h"
+#include <bits/types/struct_timeval.h>
+#include <errno.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <sys/socket.h>
+#include <sys/time.h>
 
 #define MAXTIME 120 // 2 minutes
 
@@ -76,3 +82,42 @@ int addrll_deletOld(addrllroot *root) {
 	pthread_rwlock_unlock(&(root->lock));
 	return 0;
 };
+
+const static char *search = "oscilloscope here";
+
+void *scanForEsp(addrllroot *root) {
+	int soc = socket(AF_INET, SOCK_DGRAM, 0);
+	if(soc < 0) {
+		printf("Unable to create socket errno: %d", errno);
+	}
+	static const struct timeval timeout= {
+		.tv_sec = MAXTIME/2,
+		.tv_usec = 0,
+	};	
+	setsockopt(soc, SOL_SOCKET, SO_RCVTIMEO, (const void *) &timeout, sizeof(timeout));
+	struct sockaddr_in localAddr = {.sin_addr = INADDR_ANY, .sin_port = htons(40000), .sin_family = AF_INET};
+	if(bind(soc, (const struct sockaddr *)&localAddr, sizeof(localAddr)) < 0) {
+		printf("can't bind to socket\n");
+		exit(-1);
+	};
+	char buffer[strlen(search)];
+	memset(buffer, '\0', strlen(search));
+	while(true) {
+		struct sockaddr addr;
+		socklen_t addrlen = sizeof(addr);
+		int aread = recvfrom(soc, &buffer, sizeof(buffer), 0, &addr, &addrlen);
+		if (aread <0) {
+			printf("read failed\n");
+			exit(-1);
+		}
+		if (aread == 0) {
+			addrll_deletOld(root);
+			continue;
+		}
+		if(strncmp(buffer, search, strlen(search)) == 0) {
+			addrll_update(root, addr);
+		};
+		addrll_deletOld(root);
+	}
+	return NULL;
+}
