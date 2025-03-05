@@ -11,8 +11,11 @@ target_include_directories(main PUBLIC
 	"${PROJECT_SOURCE_DIR}/include"
 )
 add_subdirectory(addrlist)
+add_subdirectory(rayguiimpl)
 target_link_libraries(main PRIVATE
 	pthread
 	raylib
+	rayguiimpl
 	addrlist
+	m
 )
