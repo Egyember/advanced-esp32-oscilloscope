@@ -25,7 +25,7 @@ struct device {
 
 typedef struct device *devices;
 
-struct device *devices_connect(struct scopeConf config);
+struct device *devices_connect(struct scopeConf config, addrll addres);
 int devices_append(devices devices, struct device dev);
 int devices_disconnect(devices devices, struct device dev);
 #endif
