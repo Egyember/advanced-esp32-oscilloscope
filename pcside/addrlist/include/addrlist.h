@@ -13,7 +13,6 @@ typedef struct addrll {
 	struct sockaddr addr;
 	time_t lastseen;
 	bool conneted;
-	int fd;
 	struct addrll *next;
 	struct addrll *prev;
 } addrll;
