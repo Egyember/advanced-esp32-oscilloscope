@@ -1,28 +1,31 @@
-#ifndef addrlist
-#define addrlist
-#include <stdbool.h>
+#ifndef ADDRLIST
+#define ADDRLIST
 #include <sys/socket.h>
-#include <time.h>
+#include <ctime>
 #include <pthread.h>
+namespace addrlist{
 
-typedef struct addrllroot {
-	pthread_rwlock_t lock;
-	struct addrll *next;
-} addrllroot;
-typedef struct addrll {
+struct addrllnode {
 	struct sockaddr addr;
 	time_t lastseen;
 	bool conneted;
 	struct addrll *next;
 	struct addrll *prev;
-} addrll;
+};
+class root{
+	private:
+		pthread_rwlock_t lock;
+		struct addrll *next;
+	public:
+		root();
+		int addrl_update(struct sockaddr addr);
+		int addrll_deletOld();
+		int addrll_connect(struct sockaddr *taddress);
+		int addrll_disconnect(struct sockaddr *taddress);
+		int addrll_lenth();
+		void *scanForEsp();
+};
 
-addrllroot *addrll_init();
 
-int addrl_update(addrllroot *addrll, struct sockaddr addr);
-int addrll_deletOld(addrllroot *addrll);
-int addrll_connect(addrllroot *root, struct sockaddr *taddress);
-int addrll_disconnect(addrllroot *root, struct sockaddr *taddress);
-int addrll_lenth(addrllroot *root);
-void *scanForEsp(addrllroot *root);
+};
 #endif

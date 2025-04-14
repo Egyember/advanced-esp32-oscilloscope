@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 add_library(addrlist
-	addrlist.c
+	addrlist.cpp
 	include/addrlist.h
 )
 target_include_directories(addrlist PUBLIC

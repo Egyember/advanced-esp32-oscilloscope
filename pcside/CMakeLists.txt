@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.31)
-set(CMAKE_C_COMPILER "gcc")
+set(CMAKE_C++_COMPILER "/usr/bin/g++")
 project(
 	espScope
 	VERSION 0.0.1
-	LANGUAGES C)
+	LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "") # hack to make it work
-add_compile_options( -Wall -O2 --std=gnu17 -g)
-add_executable(main main.c)
+add_compile_options( -Wall -O2 --std=c++17 -g)
+add_executable(main main.cpp)
 target_include_directories(main PUBLIC
 	"${PROJECT_SOURCE_DIR}/include"
 )
