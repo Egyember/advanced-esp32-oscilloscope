@@ -6,6 +6,9 @@
 #include "espsiteTypes.h"
 #include <pthread.h>
 
+#ifndef BUFFERMULTIPLIER
+#define BUFFERMULTIPLIER 8
+#endif
 struct ringbuffer{
 	unsigned char *bufferStart;
 	size_t bufferLength;
@@ -25,8 +28,8 @@ struct device {
 	 * addrllroot must be locked for reading manually befor reading or writeing.
 	 * At least the next, previus,lastseen filds
 	 */
-	addrll *discovered;
 	struct scopeConf config;
+	struct sockaddr *address;
 	int fd;
 
 	/**
@@ -34,15 +37,14 @@ struct device {
 	 * config.sampleRate * (config.duration / 1000) * SOC_ADC_DIGI_RESULT_BYTES; 
 	 * // SOC_ADC_DIGI_RESULT_BYTES = 2 byte = 16 bit
 	 */
-	struct ringbuffer buffer; //replace with ring buffer
+	struct ringbuffer *buffer; //array of buffer headers one per channel
 	pthread_t reader;
+	pthread_rwlock_t lock; //for changeing the pointers below
 	struct device *next;
+	struct device *prev;
 };
 
-typedef struct device *devices;
-
-struct device *devices_connect(struct scopeConf config, addrll addres);
-int devices_append(devices devices, struct device dev);
-int devices_disconnect(devices devices, struct device dev);
+int devices_append(struct device* to, struct device *dev);
+int devices_disconnect(struct device *dev);
 
 #endif

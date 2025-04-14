@@ -5,7 +5,7 @@ add_library(devices
 	include/devices.h
 	include/espsiteTypes.h
 )
-target_include_directories(addrlist PUBLIC
+target_include_directories(devices PUBLIC
 	"${CMAKE_CURRENT_LIST_DIR}/include"
 )
 

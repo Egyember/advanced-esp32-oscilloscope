@@ -123,8 +123,8 @@ int readConfig(int soc, struct scopeConf *config){
 		return -1;
 	};
 	config->channels = buffer[0];
-	config->duration = htonl(*((uint32_t *)(&buffer[1]))); 
-	config->sampleRate = htonl(*((uint32_t *)(&buffer[5]))); 
+	config->duration = ntohl(*((uint32_t *)(&buffer[1]))); 
+	config->sampleRate = ntohl(*((uint32_t *)(&buffer[5]))); 
 	return 0;
 
 };

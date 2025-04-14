@@ -9,8 +9,9 @@
 #include <time.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <unistd.h>
 
-#define MAXTIME 120 // 2 minutes
+#define MAXTIME 60 // 1 minutes
 
 addrllroot *addrll_init(){
 	addrllroot *ret = malloc(sizeof(addrllroot));
@@ -64,6 +65,10 @@ int addrll_update(addrllroot *root, struct sockaddr addr) {
 };
 
 int addrll_deletOld(addrllroot *root) {
+	if (root == NULL) {
+		printf("NULL arg\n");
+		exit(-1);
+	}
 	pthread_rwlock_rdlock(&(root->lock));
 	addrll *addr = root->next;
 	while(addr != NULL) {
@@ -83,13 +88,74 @@ int addrll_deletOld(addrllroot *root) {
 	return 0;
 };
 
-const static char *search = "oscilloscope here";
+int addrll_connect(addrllroot *root, struct sockaddr *taddress) {
+	if (root == NULL) {
+		printf("NULL arg\n");
+		exit(-1);
+	}
+	pthread_rwlock_rdlock(&(root->lock));
+	addrll *addr = root->next;
+	while(addr != NULL) {
+		if(memcmp(addr, taddress, sizeof(struct sockaddr))== 0) {
+			pthread_rwlock_unlock(&(root->lock));
+			pthread_rwlock_wrlock(&(root->lock));
+			addr->conneted = true;
+			pthread_rwlock_unlock(&(root->lock));
+			pthread_rwlock_rdlock(&(root->lock));
+		}
+		addr = addr->next;
+	}
+	pthread_rwlock_unlock(&(root->lock));
+	return 0;
+};
 
+int addrll_disconnect(addrllroot *root, struct sockaddr *taddress) {
+	if (root == NULL) {
+		printf("NULL arg\n");
+		exit(-1);
+	}
+	pthread_rwlock_rdlock(&(root->lock));
+	addrll *addr = root->next;
+	while(addr != NULL) {
+		if(memcmp(addr, taddress, sizeof(struct sockaddr))== 0) {
+			pthread_rwlock_unlock(&(root->lock));
+			pthread_rwlock_wrlock(&(root->lock));
+			addr->conneted = false;
+			pthread_rwlock_unlock(&(root->lock));
+			pthread_rwlock_rdlock(&(root->lock));
+		}
+		addr = addr->next;
+	}
+	pthread_rwlock_unlock(&(root->lock));
+	return 0;
+};
+
+
+int addrll_lenth(addrllroot *root){
+	if (root == NULL) {
+		printf("NULL arg\n");
+		exit(-1);
+	}
+	int len = 0;
+	pthread_rwlock_rdlock(&(root->lock));
+	addrll *addr = root->next;
+	while(addr != NULL) {
+		len++;
+		addr = addr->next;
+	}
+	pthread_rwlock_unlock(&(root->lock));
+	return len;
+};
+
+
+//todo fix buffer overflow
+const static char *search = "oscilloscope here";
 void *scanForEsp(addrllroot *root) {
 	int soc = socket(AF_INET, SOCK_DGRAM, 0);
 	if(soc < 0) {
 		printf("Unable to create socket errno: %d", errno);
 	}
+
 	static const struct timeval timeout= {
 		.tv_sec = MAXTIME/2,
 		.tv_usec = 0,
@@ -107,13 +173,16 @@ void *scanForEsp(addrllroot *root) {
 		socklen_t addrlen = sizeof(addr);
 		int aread = recvfrom(soc, &buffer, sizeof(buffer), 0, &addr, &addrlen);
 		if (aread <0) {
-			printf("read failed\n");
-			exit(-1);
+			printf("read failed err: %d\n", aread);
+			addrll_deletOld(root);
+			continue;
+	//		exit(-1);
 		}
 		if (aread == 0) {
 			addrll_deletOld(root);
 			continue;
 		}
+		// itt V
 		if(strncmp(buffer, search, strlen(search)) == 0) {
 			addrll_update(root, addr);
 		};

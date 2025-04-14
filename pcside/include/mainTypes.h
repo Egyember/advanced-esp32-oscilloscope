@@ -9,7 +9,7 @@
 
 struct state {
 	addrllroot *addrRoot;
-	devices devices;
+	struct device* devices;
 };
 typedef struct state *Pstate;
 
