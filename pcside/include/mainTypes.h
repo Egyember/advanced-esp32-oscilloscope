@@ -8,7 +8,7 @@
 
 
 struct state {
-	addrllroot *addrRoot;
+	addrlist::root *addrRoot;
 	struct device* devices;
 };
 typedef struct state *Pstate;

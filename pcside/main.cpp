@@ -10,11 +10,12 @@
 #include <addrlist.h>
 #include <mainTypes.h>
 
-#include <drawDevices.h>
+//#include <drawDevices.h>
 
 int main(void) {
-	Pstate state = malloc(sizeof(struct state));
-	state->addrRoot = addrll_init();
+	Pstate state = (Pstate)malloc(sizeof(struct state));
+	state->addrRoot = new addrlist::root;
+	/*
 	pthread_t scanner;
 	pthread_create(&scanner, NULL, (void *(*)(void *))scanForEsp, state->addrRoot);
 	InitWindow(0, 0, "teszt");
@@ -39,5 +40,6 @@ int main(void) {
 		EndDrawing();
 	};
 	CloseWindow();        // Close window and OpenGL context
+	*/
 	return 0;
 }

@@ -2,191 +2,189 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <pthread.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #define MAXTIME 60 // 1 minutes
 #include "addrlist.h"
-addrlist::root::root(){
-			next = nullptr;
-			pthread_rwlock_init(&(lock), NULL);
+using namespace addrlist;
+
+addrllnode::addrllnode() {
+	memset(&addr, 0, sizeof(addr));
+	lastseen = 0;
+	conneted = false;
+	next = nullptr;
+	prev = nullptr;
+}
+
+addrllnode::addrllnode(struct sockaddr address) {
+	addr = address;
+	lastseen = 0;
+	conneted = false;
+	next = nullptr;
+	prev = nullptr;
+}
+root::root() {
+	next = nullptr;
+	pthread_rwlock_init(&(lock), NULL);
+	search = "oscilloscope here";
 };
 
-
-/*
-int addrll_update(addrllroot *root, struct sockaddr addr) {
-	pthread_rwlock_rdlock(&(root->lock));
-	addrll *nodeAddr = root->next;
+int root::update(struct sockaddr addr) {
+	pthread_rwlock_rdlock(&(this->lock));
+	addrllnode *nodeAddr = this->next;
 	bool found = false;
 	while(nodeAddr != NULL) {
 		if(memcmp(&(nodeAddr->addr), &addr, sizeof(nodeAddr->addr)) == 0) {
 			time_t now;
 			time(&now);
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_wrlock(&(root->lock));
+			pthread_rwlock_unlock(&(this->lock));
+			pthread_rwlock_wrlock(&(this->lock));
 			nodeAddr->lastseen = now;
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_rdlock(&(root->lock));
+			pthread_rwlock_unlock(&(this->lock));
+			pthread_rwlock_rdlock(&(this->lock));
 			found = true;
 			break;
 		}
 		nodeAddr = nodeAddr->next;
 	}
 	if(!found) {
-		addrll *newNode = malloc(sizeof(addrll));
-		memset(newNode, '\0', sizeof(addrll));
-		memcpy(&(newNode->addr), &addr, sizeof(struct sockaddr));
-		if(root->next == NULL) {
-			root->next = newNode;
+		addrllnode *newNode = new addrllnode(addr);
+		if(next == nullptr) {
+			next = newNode;
 		} else {
-			nodeAddr = root->next;
-			while(nodeAddr != NULL) { //this can be avoided if I add a lase fild to the root node
+			nodeAddr = next;
+			while(nodeAddr != NULL) { // this can be avoided if I add a last fild to the root node
 				if(nodeAddr->next == NULL) {
-					pthread_rwlock_unlock(&(root->lock));
-					pthread_rwlock_wrlock(&(root->lock));
+					pthread_rwlock_unlock(&lock);
+					pthread_rwlock_wrlock(&lock);
 					nodeAddr->next = newNode;
 					newNode->prev = nodeAddr;
-					pthread_rwlock_unlock(&(root->lock));
-					pthread_rwlock_rdlock(&(root->lock));
+					pthread_rwlock_unlock(&lock);
+					pthread_rwlock_rdlock(&lock);
 					break;
 				}
 				nodeAddr = nodeAddr->next;
 			}
 		}
 	}
-	pthread_rwlock_unlock(&(root->lock));
+	pthread_rwlock_unlock(&lock);
 	return 0;
 };
 
-int addrll_deletOld(addrllroot *root) {
-	if (root == NULL) {
-		printf("NULL arg\n");
-		exit(-1);
-	}
-	pthread_rwlock_rdlock(&(root->lock));
-	addrll *addr = root->next;
+int root::deletOld() {
+	pthread_rwlock_rdlock(&lock);
+	addrllnode *addr = next;
 	while(addr != NULL) {
 		time_t now;
 		time(&now);
 		if(addr->lastseen - now > MAXTIME && !addr->conneted) {
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_wrlock(&(root->lock));
+			pthread_rwlock_unlock(&lock);
+			pthread_rwlock_wrlock(&lock);
 			addr->prev->next = addr->next;
-			free(addr);
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_rdlock(&(root->lock));
+			delete addr;
+			pthread_rwlock_unlock(&lock);
+			pthread_rwlock_rdlock(&lock);
 		}
 		addr = addr->next;
 	}
-	pthread_rwlock_unlock(&(root->lock));
+	pthread_rwlock_unlock(&lock);
 	return 0;
 };
 
-int addrll_connect(addrllroot *root, struct sockaddr *taddress) {
-	if (root == NULL) {
-		printf("NULL arg\n");
-		exit(-1);
-	}
-	pthread_rwlock_rdlock(&(root->lock));
-	addrll *addr = root->next;
+int root::connect(struct sockaddr *taddress) {
+	pthread_rwlock_rdlock(&lock);
+	addrllnode *addr = next;
 	while(addr != NULL) {
-		if(memcmp(addr, taddress, sizeof(struct sockaddr))== 0) {
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_wrlock(&(root->lock));
+		if(memcmp(addr, taddress, sizeof(struct sockaddr)) == 0) {
+			pthread_rwlock_unlock(&lock);
+			pthread_rwlock_wrlock(&lock);
 			addr->conneted = true;
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_rdlock(&(root->lock));
+			pthread_rwlock_unlock(&lock);
+			return 0;
 		}
 		addr = addr->next;
 	}
-	pthread_rwlock_unlock(&(root->lock));
-	return 0;
+	pthread_rwlock_unlock(&lock);
+	return -1;
 };
 
-int addrll_disconnect(addrllroot *root, struct sockaddr *taddress) {
-	if (root == NULL) {
-		printf("NULL arg\n");
-		exit(-1);
-	}
-	pthread_rwlock_rdlock(&(root->lock));
-	addrll *addr = root->next;
+int root::disconnect(struct sockaddr *taddress) {
+	pthread_rwlock_rdlock(&lock);
+	addrllnode *addr = next;
 	while(addr != NULL) {
-		if(memcmp(addr, taddress, sizeof(struct sockaddr))== 0) {
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_wrlock(&(root->lock));
+		if(memcmp(addr, taddress, sizeof(struct sockaddr)) == 0) {
+			pthread_rwlock_unlock(&lock);
+			pthread_rwlock_wrlock(&lock);
 			addr->conneted = false;
-			pthread_rwlock_unlock(&(root->lock));
-			pthread_rwlock_rdlock(&(root->lock));
+			pthread_rwlock_unlock(&lock);
+			return 0;
 		}
 		addr = addr->next;
 	}
-	pthread_rwlock_unlock(&(root->lock));
-	return 0;
+	pthread_rwlock_unlock(&lock);
+	return -1;
 };
 
-
-int addrll_lenth(addrllroot *root){
-	if (root == NULL) {
-		printf("NULL arg\n");
-		exit(-1);
-	}
+int root::lenth() {
 	int len = 0;
-	pthread_rwlock_rdlock(&(root->lock));
-	addrll *addr = root->next;
+	pthread_rwlock_rdlock(&lock);
+	addrllnode *addr = next;
 	while(addr != NULL) {
 		len++;
 		addr = addr->next;
 	}
-	pthread_rwlock_unlock(&(root->lock));
+	pthread_rwlock_unlock(&lock);
 	return len;
 };
 
-
-//todo fix buffer overflow
-const static char *search = "oscilloscope here";
-void *scanForEsp(addrllroot *root) {
+// todo fix buffer overflow
+void *root::scanForEsp() {
 	int soc = socket(AF_INET, SOCK_DGRAM, 0);
 	if(soc < 0) {
 		printf("Unable to create socket errno: %d", errno);
 	}
 
-	static const struct timeval timeout= {
-		.tv_sec = MAXTIME/2,
-		.tv_usec = 0,
-	};	
-	setsockopt(soc, SOL_SOCKET, SO_RCVTIMEO, (const void *) &timeout, sizeof(timeout));
-	struct sockaddr_in localAddr = {.sin_addr = INADDR_ANY, .sin_port = htons(40000), .sin_family = AF_INET};
+	static const struct timeval timeout = {
+	    .tv_sec = MAXTIME / 2,
+	    .tv_usec = 0,
+	};
+	setsockopt(soc, SOL_SOCKET, SO_RCVTIMEO, (const void *)&timeout, sizeof(timeout));
+	struct sockaddr_in localAddr = {
+	    .sin_family = AF_INET,
+	    .sin_port = htons(40000),
+	    .sin_addr = INADDR_ANY,
+	};
 	if(bind(soc, (const struct sockaddr *)&localAddr, sizeof(localAddr)) < 0) {
 		printf("can't bind to socket\n");
 		exit(-1);
 	};
-	char buffer[strlen(search)];
-	memset(buffer, '\0', strlen(search));
+	char buffer[search_len];
+	memset(buffer, '\0', search_len);
 	while(true) {
 		struct sockaddr addr;
 		socklen_t addrlen = sizeof(addr);
 		int aread = recvfrom(soc, &buffer, sizeof(buffer), 0, &addr, &addrlen);
-		if (aread <0) {
+		if(aread < 0) {
 			printf("read failed err: %d\n", aread);
-			addrll_deletOld(root);
+			this->deletOld();
 			continue;
-	//		exit(-1);
+			//		exit(-1);
 		}
-		if (aread == 0) {
-			addrll_deletOld(root);
+		if(aread == 0) {
+			this->deletOld();
 			continue;
 		}
 		// itt V
-		if(strncmp(buffer, search, strlen(search)) == 0) {
-			addrll_update(root, addr);
+		if(strncmp(buffer, search.c_str(), search.length()) == 0) {
+			this->update(addr);
 		};
-		addrll_deletOld(root);
+		deletOld();
 	}
 	return NULL;
 }
-*/
