@@ -1,4 +1,5 @@
 #include <bits/types/struct_timeval.h>
+#include <cstring>
 #include <errno.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -29,11 +30,6 @@ addrllnode::addrllnode(struct sockaddr address) {
 	next = nullptr;
 	prev = nullptr;
 }
-root::root() {
-	next = nullptr;
-	pthread_rwlock_init(&(lock), NULL);
-	search = "oscilloscope here";
-};
 
 int root::update(struct sockaddr addr) {
 	pthread_rwlock_rdlock(&(this->lock));
@@ -83,7 +79,7 @@ int root::deletOld() {
 	while(addr != NULL) {
 		time_t now;
 		time(&now);
-		if(addr->lastseen - now > MAXTIME && !addr->conneted) {
+		if((addr->lastseen - now > MAXTIME) && !addr->conneted) {
 			pthread_rwlock_unlock(&lock);
 			pthread_rwlock_wrlock(&lock);
 			addr->prev->next = addr->next;
@@ -144,7 +140,7 @@ int root::lenth() {
 };
 
 // todo fix buffer overflow
-void *root::scanForEsp() {
+void *root::scanForEsp(root *root) {
 	int soc = socket(AF_INET, SOCK_DGRAM, 0);
 	if(soc < 0) {
 		printf("Unable to create socket errno: %d", errno);
@@ -164,27 +160,38 @@ void *root::scanForEsp() {
 		printf("can't bind to socket\n");
 		exit(-1);
 	};
-	char buffer[search_len];
-	memset(buffer, '\0', search_len);
+	char buffer[root->search.length()+1]; // +null byte
+	memset(buffer, '\0', root->search.length()+1);
 	while(true) {
 		struct sockaddr addr;
 		socklen_t addrlen = sizeof(addr);
 		int aread = recvfrom(soc, &buffer, sizeof(buffer), 0, &addr, &addrlen);
 		if(aread < 0) {
 			printf("read failed err: %d\n", aread);
-			this->deletOld();
+			root->deletOld();
 			continue;
 			//		exit(-1);
 		}
 		if(aread == 0) {
-			this->deletOld();
+			root->deletOld();
 			continue;
 		}
 		// itt V
-		if(strncmp(buffer, search.c_str(), search.length()) == 0) {
-			this->update(addr);
+		if(strncmp(buffer, root->search.c_str(), root->search.length()+1) == 0) {
+			root->update(addr);
 		};
-		deletOld();
+		root->deletOld();
 	}
 	return NULL;
 }
+
+root::root() {
+	next = nullptr;
+	pthread_rwlock_init(&(lock), NULL);
+	search = "oscilloscope here";
+	void *(*fpointer)(void*)= (void* (*)(void*))&scanForEsp;
+	pthread_create(&scanner, NULL, fpointer, this);
+};
+
+root::~root() {
+};

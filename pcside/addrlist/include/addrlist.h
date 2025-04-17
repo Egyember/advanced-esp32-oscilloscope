@@ -19,17 +19,18 @@ class root {
       private:
 	pthread_rwlock_t lock;
 	struct addrllnode *next;
-	char *search;
-	size_t search_len;
+	std::string search;
+	pthread_t scanner;
 
       public:
 	root();
+	~root();
 	int update(struct sockaddr addr);
 	int deletOld();
 	int connect(struct sockaddr *taddress);
 	int disconnect(struct sockaddr *taddress);
 	int lenth();
-	void *scanForEsp();
+	static void *scanForEsp(root *root);
 };
 
 }; // namespace addrlist
