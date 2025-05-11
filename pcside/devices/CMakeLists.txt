@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 add_library(devices
-	devices.c
-	ringBuffer.c
+	devices.cpp
+	ringBuffer.cpp
 	include/devices.h
 	include/espsiteTypes.h
 )

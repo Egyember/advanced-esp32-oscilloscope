@@ -1,4 +1,5 @@
 #include <bits/types/struct_timeval.h>
+#include <csignal>
 #include <cstring>
 #include <errno.h>
 #include <netinet/in.h>
@@ -163,6 +164,7 @@ void *root::scanForEsp(root *root) {
 	char buffer[root->search.length()+1]; // +null byte
 	memset(buffer, '\0', root->search.length()+1);
 	while(true) {
+		pthread_tryjoin_np(root->scanner, nullptr);
 		struct sockaddr addr;
 		socklen_t addrlen = sizeof(addr);
 		int aread = recvfrom(soc, &buffer, sizeof(buffer), 0, &addr, &addrlen);
@@ -193,5 +195,23 @@ root::root() {
 	pthread_create(&scanner, NULL, fpointer, this);
 };
 
-root::~root() {
+root::~root(){
+	pthread_kill(scanner, SIGTERM);
+	struct addrllnode::addrllnode *node= next ;
+	int len = 0;
+	while (node != NULL) {
+		len++;
+		node = node->next;
+	};
+	node= next;
+	struct addrllnode::addrllnode **nodes = new struct addrllnode::addrllnode*[len];
+	for (int i = 0; i<len;i++ ) {
+		nodes[i] = node;
+		node = node->next;
+	}
+	for (int i = 0; i<len;i++ ) {
+		delete nodes[i];
+	;}
+	delete[] nodes;
+	
 };
