@@ -1,82 +1,81 @@
 #include <assert.h>
-#include <devices.h>
+#include <ringbuffer.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int initBuffer(struct ringbuffer *buffer, size_t size){
-	if (buffer == NULL) {
-		return -1;
-	}
-	if (size<0) {
-		return -1;
-	}
-	buffer->bufferLength = size;
-	buffer->bufferStart = malloc(size);
-	if (buffer->bufferStart == NULL) {
-		printf("out of memory");
-		return -1;
-	}
-	pthread_mutex_init(&(buffer->readLock), NULL);
-	pthread_mutex_init(&(buffer->writeLock), NULL);
-	buffer->rdPrt = buffer->bufferStart;
-	buffer->wrPrt = buffer->bufferStart;
-	return 0;
+using namespace ringbuffers;
+
+ringbuffer::ringbuffer(size_t size){
+//int initBuffer(struct ringbuffer *buffer, size_t size){
+	this->bufferLength = size;
+	this->bufferStart = new unsigned char[size];
+	pthread_mutex_init(&(this->readLock), NULL);
+	pthread_mutex_init(&(this->writeLock), NULL);
+	this->rdPrt = this->bufferStart;
+	this->wrPrt = this->bufferStart;
 };
-int readBuffer(struct ringbuffer *buffer, unsigned char *dest, size_t size){
-	pthread_mutex_lock(&buffer->readLock);
-	pthread_mutex_lock(&buffer->writeLock);
+
+ringbuffer::~ringbuffer(){
+	delete this->bufferStart;
+	pthread_mutex_destroy(&this->readLock);
+	pthread_mutex_destroy(&this->writeLock);
+}
+
+int ringbuffer::readBuffer(unsigned char *dest, size_t size){
+	pthread_mutex_lock(&this->readLock);
+	pthread_mutex_lock(&this->writeLock);
 	size_t avalable;
-	if( buffer->wrPrt > buffer->rdPrt){
-		avalable = buffer->wrPrt - buffer->rdPrt;
+	if( this->wrPrt > this->rdPrt){
+		avalable = this->wrPrt - this->rdPrt;
 	}else{
-		avalable = buffer->bufferLength - (buffer->wrPrt - buffer->rdPrt);
+		avalable = this->bufferLength - (this->wrPrt - this->rdPrt);
 	}
-	pthread_mutex_unlock(&buffer->writeLock);
+	pthread_mutex_unlock(&this->writeLock);
 	if (size>avalable) {
 		size = avalable;
 	};
-	int overflow = (buffer->rdPrt+size) - (buffer->bufferStart+buffer->bufferLength);
+	int overflow = (this->rdPrt+size) - (this->bufferStart+this->bufferLength);
 	if(overflow>0){
-		memcpy(dest, buffer->rdPrt, size - overflow);
-		memcpy(dest+(size - overflow), buffer->bufferStart, overflow);
-		buffer->rdPrt = buffer->bufferStart+overflow;
+		memcpy(dest, this->rdPrt, size - overflow);
+		memcpy(dest+(size - overflow), this->bufferStart, overflow);
+		this->rdPrt = this->bufferStart+overflow;
 	}else{
-		memcpy(dest, buffer->rdPrt, size);
-		buffer->rdPrt += size;
+		memcpy(dest, this->rdPrt, size);
+		this->rdPrt += size;
 	}
-	pthread_mutex_unlock(&buffer->readLock);
+	pthread_mutex_unlock(&this->readLock);
 	return size;
 };
 
-int writeBuffer(struct ringbuffer *buffer, unsigned char *src, size_t size){
-	pthread_mutex_lock(&buffer->writeLock);
-	pthread_mutex_lock(&buffer->readLock);
+int ringbuffer::writeBuffer(unsigned char *src, size_t size){
+	pthread_mutex_lock(&this->writeLock);
+	pthread_mutex_lock(&this->readLock);
 	size_t avalable;
-	if( buffer->wrPrt < buffer->rdPrt){
-		avalable = buffer->wrPrt - buffer->rdPrt;
+	if( this->wrPrt < this->rdPrt){
+		avalable = this->wrPrt - this->rdPrt;
 	}else{
-		avalable = buffer->bufferLength - (buffer->wrPrt - buffer->rdPrt);
+		avalable = this->bufferLength - (this->wrPrt - this->rdPrt);
 	}
-	int overflow =  (buffer->rdPrt +size) - (buffer->bufferStart+buffer->bufferLength);
+	int overflow =  (this->rdPrt +size) - (this->bufferStart+this->bufferLength);
 	if (size > avalable) {
 		if (overflow > 0) {
-			buffer->rdPrt = buffer->bufferStart + overflow;
+			this->rdPrt = this->bufferStart + overflow;
 		}else{
-			buffer->rdPrt += size;
+			this->rdPrt += size;
 		}
 	}
-	pthread_mutex_unlock(&buffer->readLock);
+	pthread_mutex_unlock(&this->readLock);
 	if(overflow>0){
-		memcpy(buffer->wrPrt, src, size - overflow);
-		memcpy(buffer->bufferStart, src+size - overflow, overflow);
-		buffer->wrPrt = buffer->bufferStart+overflow;
+		memcpy(this->wrPrt, src, size - overflow);
+		memcpy(this->bufferStart, src+size - overflow, overflow);
+		this->wrPrt = this->bufferStart+overflow;
 	}else{
-		memcpy(buffer->wrPrt, src, size);
-		buffer->wrPrt += size;
+		memcpy(this->wrPrt, src, size);
+		this->wrPrt += size;
 	}
-	pthread_mutex_unlock(&buffer->writeLock);
+	pthread_mutex_unlock(&this->writeLock);
 	return size;
 };
 

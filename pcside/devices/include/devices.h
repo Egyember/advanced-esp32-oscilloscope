@@ -9,18 +9,9 @@
 #ifndef BUFFERMULTIPLIER
 #define BUFFERMULTIPLIER 8
 #endif
-struct ringbuffer{
-	unsigned char *bufferStart;
-	size_t bufferLength;
-	pthread_mutex_t writeLock;
-	unsigned char *wrPrt;
-	pthread_mutex_t readLock;
-	unsigned char *rdPrt;
-};
+namespace devices{
 
-int initBuffer(struct ringbuffer *buffer, size_t size);
-int readBuffer(struct ringbuffer *buffer, unsigned char *dest, size_t size);
-int writeBuffer(struct ringbuffer *buffer, unsigned char *dest, size_t size);
+	//todo: refactor to std::list + mutex insted of costume ll
 
 struct device {
 
@@ -46,5 +37,5 @@ struct device {
 
 int devices_append(struct device* to, struct device *dev);
 int devices_disconnect(struct device *dev);
-
+}
 #endif

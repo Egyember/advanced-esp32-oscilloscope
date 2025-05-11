@@ -4,6 +4,7 @@ add_library(devices
 	ringBuffer.cpp
 	include/devices.h
 	include/espsiteTypes.h
+	include/ringbuffer.h
 )
 target_include_directories(devices PUBLIC
 	"${CMAKE_CURRENT_LIST_DIR}/include"
