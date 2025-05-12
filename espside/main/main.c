@@ -6,12 +6,14 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
+#include "esp_system.h"
 #include "esp_wifi.h"
 #include "esp_wifi_default.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/idf_additions.h"
 #include "freertos/task.h"
+#include "hal/adc_types.h"
 #include "lwip/inet.h"
 #include "lwip/sockets.h"
 #include "nvs.h"
@@ -21,6 +23,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
+
+
+#include <soc/soc_caps.h>
+
 
 #define WIFIDONEBIT BIT0
 #define WIFIFAILED BIT1
@@ -115,7 +122,8 @@ int readConfig(int soc, struct scopeConf *config){
 			ESP_LOGE(MAIN_TAG, "ioctl failed errno: %s", strerror(errno));
 			return -1;
 		};
-	}while (avalable >= CONFREADBUFFER);
+		ESP_LOGI(MAIN_TAG, "%d byte avalable %d needed", avalable, CONFREADBUFFER);
+	}while (avalable < CONFREADBUFFER);
 	uint8_t buffer[CONFREADBUFFER];
 	int err = read(soc, &buffer, CONFREADBUFFER);
 	if(err < 0) {
@@ -155,7 +163,6 @@ void app_main(void) {
 	    esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, ip_event_handler, netint, &ipeventh));
 
 	wifi_config_t wificonfig = {0};
-WIFISETUP:
 	// reading config from nvs
 	nvs_handle_t nvsHandle;
 	{
@@ -165,8 +172,7 @@ WIFISETUP:
 		if(wifiLen > 32) {
 			ESP_LOGE(MAIN_TAG, "too long ssid stored in nvs. Jumping to bt setup");
 			btconfig(); // todo: implemnet
-			retry = 0;
-			goto WIFISETUP;
+			esp_restart();
 		};
 		nvs_get_str(nvsHandle, "ssid", (char *)&wificonfig.sta.ssid, &wifiLen);
 
@@ -174,7 +180,7 @@ WIFISETUP:
 		if(wifiLen > 64) { // implemention limit to passwd lenght is 64
 			ESP_LOGE(MAIN_TAG, "too long ssid stored in nvs. Jumping to bt setup");
 			btconfig(); // todo: implemnet
-			goto WIFISETUP;
+			esp_restart();
 		};
 		nvs_get_str(nvsHandle, "passwd", (char *)&wificonfig.sta.password, &wifiLen);
 
@@ -193,11 +199,12 @@ WIFISETUP:
 	ESP_LOGI(MAIN_TAG, "event magic started");
 	EventBits_t bits = xEventGroupWaitBits(wifi_eventGroup, WIFIDONEBIT | WIFIFAILED, pdTRUE, pdFALSE,
 					       portMAX_DELAY); // todo: add fail bit and check
-	if(bits | WIFIFAILED) {
+	if(bits & WIFIFAILED) {
+		ESP_LOGW(MAIN_TAG,"WIFIDONEBIT: %d", bits & WIFIDONEBIT ? 1:0);
 		ESP_LOGI(MAIN_TAG, "event magic failed entering config mode");
 		btconfig();
-		ESP_LOGI(MAIN_TAG, "Jumping to wifi setup");
-		goto WIFISETUP;
+		ESP_LOGI(MAIN_TAG, "reboot");
+		esp_restart();
 	};
 
 	ESP_LOGI(MAIN_TAG, "wifi done");
@@ -217,18 +224,35 @@ WIFISETUP:
 		close(soc);
 		goto CLEANUPWITHSOC;
 	}
+	ESP_LOGI(MAIN_TAG, "server whaiting for connection");
 	while(true) {
 		struct sockaddr_in inaddr;
 		socklen_t inlen = sizeof(inaddr);
 		int fd = accept(soc, (struct sockaddr *)&inaddr, &inlen);
+		ESP_LOGI(MAIN_TAG, "got connection");
 		struct scopeConf config;
 		if(readConfig(fd, &config) < 0) {
 			close(fd);
 			ESP_LOGW(MAIN_TAG, "reading in confing failed");
 			continue;
 		};
+		
+		ESP_LOGI(MAIN_TAG, "config: \n\tchan: %d\n\tduration: %lu\n\tfreq: %lu\n", config.channels, config.duration, config.sampleRate);
+		if (config.sampleRate < SOC_ADC_SAMPLE_FREQ_THRES_LOW) {
+			ESP_LOGE(MAIN_TAG, "frequency must be greather then %dkHz", SOC_ADC_SAMPLE_FREQ_THRES_LOW/1000);
+			close(fd);
+			ESP_LOGW(MAIN_TAG, "reading in confing failed");
+			continue;
+		}
+		if (config.sampleRate > SOC_ADC_SAMPLE_FREQ_THRES_HIGH) {
+			ESP_LOGE(MAIN_TAG, "frequency must be less then %dkHz", SOC_ADC_SAMPLE_FREQ_THRES_HIGH/1000);
+			close(fd);
+			ESP_LOGW(MAIN_TAG, "reading in confing failed");
+			continue;
+		}
 		uint32_t frameSize =
-		    config.sampleRate * (config.duration / 1000) * SOC_ADC_DIGI_RESULT_BYTES; // 2*8= 16 bit
+		    (uint32_t)floor((float)config.sampleRate * ((float)config.duration / 1000.0) * (float)SOC_ADC_DIGI_RESULT_BYTES); // 2*8= 16 bit
+		ESP_LOGI(MAIN_TAG, "frameSize: %lu", frameSize);
 
 		adc_continuous_handle_cfg_t adcConfigHandler = {
 		    .conv_frame_size = frameSize,
@@ -242,7 +266,7 @@ WIFISETUP:
 			adcPatterns[i].atten = ADC_ATTEN_DB_12; //150 mV ~ 2450 mV
 			adcPatterns[i].channel = channelConfig[i];
 			adcPatterns[i].unit = ADC_UNIT_1;        ///< SAR ADC 1
-			adcPatterns[i].bit_width = ADC_BITWIDTH_DEFAULT; //max selected by default
+			adcPatterns[i].bit_width = ADC_BITWIDTH_12; //max selected by default
 		};
 
 		adc_continuous_config_t adcConfig = {
@@ -250,11 +274,15 @@ WIFISETUP:
 			.adc_pattern = adcPatterns,
 			.sample_freq_hz = config.sampleRate,
 			.format = ADC_DIGI_OUTPUT_FORMAT_TYPE1,
+			.conv_mode = ADC_CONV_SINGLE_UNIT_1
 		};
+		ESP_LOGI(MAIN_TAG, "buffers ready");
 		ESP_ERROR_CHECK(adc_continuous_config(adcHandler, &adcConfig));
 		adc_continuous_start(adcHandler);
+		ESP_LOGI(MAIN_TAG, "adc running");
 		uint8_t *readbuffer = malloc(sizeof(uint8_t)*frameSize); //1448 is the max tcp data segment size
 		uint32_t readData;
+		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
 			adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration);
 		}while(write(fd, readbuffer, readData)>0);

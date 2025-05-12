@@ -15,6 +15,15 @@ template<typename T>class thslist{
 	int wrlock();
 	int unlock();
 };
+
+
+template<typename T> thslist<T>::thslist(){
+	pthread_rwlock_init(&this->lock, NULL);
+}
+
+template<typename T> thslist<T>::~thslist(){
+	pthread_rwlock_destroy(&this->lock);
+}
 }
 
 #endif

@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef NDEBUG
+#include <iostream>
+#endif
 using namespace ringbuffers;
 
 ringbuffer::ringbuffer(size_t size){
@@ -17,8 +20,8 @@ ringbuffer::ringbuffer(size_t size){
 	this->wrPrt = this->bufferStart;
 };
 
-ringbuffer::~ringbuffer(){
-	delete this->bufferStart;
+ringbuffer::~ringbuffer(){ //posible doublefree
+	delete[] this->bufferStart;
 	pthread_mutex_destroy(&this->readLock);
 	pthread_mutex_destroy(&this->writeLock);
 }
@@ -46,6 +49,10 @@ int ringbuffer::readBuffer(unsigned char *dest, size_t size){
 		this->rdPrt += size;
 	}
 	pthread_mutex_unlock(&this->readLock);
+
+#ifdef NDEBUG
+	std::cout << size << " hase been read from rign buffer\n";
+#endif
 	return size;
 };
 
@@ -76,6 +83,9 @@ int ringbuffer::writeBuffer(unsigned char *src, size_t size){
 		this->wrPrt += size;
 	}
 	pthread_mutex_unlock(&this->writeLock);
+#ifdef NDEBUG
+	std::cout << size << " hase been writen to rign buffer\n";
+#endif
 	return size;
 };
 

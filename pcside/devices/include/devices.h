@@ -38,7 +38,7 @@ class device {
 			       socklen_t address_len);
 		~device();
 		//int devices_disconnect();
-		std::vector< ringbuffers::ringbuffer> buffer; //array of buffer headers one per channel
+		std::vector< ringbuffers::ringbuffer*> buffer; //array of buffer headers one per channel
 };
 
 }

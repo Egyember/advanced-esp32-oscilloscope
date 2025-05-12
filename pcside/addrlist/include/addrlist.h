@@ -18,11 +18,13 @@ struct addrllnode {
 class root {
       private:
 	pthread_rwlock_t lock;
-	struct addrllnode *next;
 	std::string search;
 	pthread_t scanner;
 
       public:
+	//temporaly fix
+	struct addrllnode *next;
+	
 	root();
 	~root();
 	int update(struct sockaddr addr);

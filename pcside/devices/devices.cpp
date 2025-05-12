@@ -12,6 +12,14 @@
 #include <unistd.h>
 #include <ringbuffer.h>
 #include <vector>
+#ifdef NDEBUG
+#include <iostream>
+#include <csignal>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <string.h>
+#endif
 
 
 
@@ -25,6 +33,9 @@ int writeConfig(int fd, struct scopeConf *config) {
 };
 
 void* devices::device::readerfunc(devices::device *dev) {
+#ifdef NDEBUG
+		std::cout << "readerfunc started\n";
+#endif
 	unsigned char *tempBuffer = new unsigned char[(int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) * dev->config.channels)];
 	std::vector<unsigned char *> prechanbuffs;
 	std::vector<size_t>perchanbuffoffset;
@@ -37,20 +48,23 @@ void* devices::device::readerfunc(devices::device *dev) {
 		int readedData = read(dev->fd, tempBuffer,
 				      (int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) *
 						 dev->config.channels));
+#ifdef NDEBUG
+		std::cout << "read from dev\n";
+#endif
 		if(readedData < 0) {
 			printf("read failed");
 			break;
 		};
 		//memcopy?
 		for(int i = 0; i < readedData; i++) {
-			if(lastchannel > (this->config.channels - 1)) {
+			if(lastchannel > (dev->config.channels - 1)) {
 				lastchannel = 0;
 			}
 			prechanbuffs[lastchannel][perchanbuffoffset[lastchannel]++] = tempBuffer[i]; //
 			lastchannel++;
 		}
 		for(int i = 0; i < dev->config.channels; i++) {
-			dev->buffer[i].writeBuffer(prechanbuffs[i], perchanbuffoffset[i]);
+			dev->buffer[i]->writeBuffer(prechanbuffs[i], perchanbuffoffset[i]);
 		}
 		for(int i = 0; i < dev->config.channels; i++) {
 			perchanbuffoffset[i] = 0;
@@ -71,14 +85,36 @@ devices::device::device(struct scopeConf config, addrlist::root *root, struct so
 	memcpy(&this->config, &config, sizeof(struct scopeConf));
 	// init ring buffer here
 	for(int i = 0; i < config.channels; i++) {
-		ringbuffers::ringbuffer tbuff(floor(config.sampleRate * ((double)config.duration / 1000.0)) * BUFFERMULTIPLIER);
+		ringbuffers::ringbuffer *tbuff = new ringbuffers::ringbuffer(floor(config.sampleRate * ((double)config.duration / 1000.0)) * BUFFERMULTIPLIER);
 		buffer.push_back(tbuff);
 	}
 
 	this->address = address;
 	root->connect(address);
 	this->fd = socket(AF_INET, SOCK_STREAM, 0);
+	bool ipv4 = false;
+	if (address_len == 16) {
+		ipv4 = true;
+	};
+	if (ipv4) {
+		struct sockaddr_in* ip = (sockaddr_in*)address;
+		ip->sin_port = ntohs(40001);
+	}else { //ipv6 support
+		struct sockaddr_in6* ip = (sockaddr_in6*)address;
+		ip->sin6_port = ntohs(40001);
+	}
 	if(connect(this->fd, address, address_len) != 0) {
+
+#ifdef NDEBUG
+		std::cout << "connection failed\n";
+		std::cout << "fd:" << this->fd <<"\n" ;
+		std::cout << "addrlen:" << address_len <<"\n" ;
+		std::cout << "ipv4 address:" << inet_ntoa(((sockaddr_in*)address)->sin_addr) <<"\n" ;
+		std::cout << "tcp port:" << htons(((sockaddr_in*)address)->sin_port) <<"\n" ;
+		std::cout << "errno:" << errno <<"\n" ;
+		std::cout << "errno string:" << strerror(errno) << "\n";
+		std::raise(SIGINT);
+#endif
 		close(this->fd);
 		buffer.clear();
 		throw "connection error";
@@ -87,6 +123,9 @@ devices::device::device(struct scopeConf config, addrlist::root *root, struct so
 	if(writeConfig(this->fd, &this->config) != 0) {
 		close(this->fd);
 		buffer.clear();
+#ifdef NDEBUG
+		std::cout << "can't send config\n";
+#endif
 		throw "connection error";
 		return;
 	}

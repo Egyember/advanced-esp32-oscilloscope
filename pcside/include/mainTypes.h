@@ -5,11 +5,12 @@
 #include <espsiteTypes.h>
 #include <devices.h>
 #include <stdint.h>
+#include <helpertypes.h>
 
 
 struct state {
 	addrlist::root *addrRoot;
-	struct device* devices;
+	helper::thslist<devices::device*> *devices;
 };
 typedef struct state *Pstate;
 

@@ -2,6 +2,6 @@
 #define drawDev
 #include <devices.h>
 #include <raygui.h>
-void drawDevice(Rectangle bounds, struct device *dev);
+void drawDevice(Rectangle bounds,  devices::device *dev);
 
 #endif
