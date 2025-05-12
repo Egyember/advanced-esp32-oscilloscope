@@ -11,6 +11,7 @@ target_include_directories(devices PUBLIC
 )
 
 target_link_libraries(devices PRIVATE
+	helper
 	addrlist
 	pthread
 )

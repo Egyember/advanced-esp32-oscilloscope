@@ -10,6 +10,10 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <ringbuffer.h>
+#include <vector>
+
+
 
 int writeConfig(int fd, struct scopeConf *config) {
 	assert(config);
@@ -20,87 +24,78 @@ int writeConfig(int fd, struct scopeConf *config) {
 	return write(fd, buffer, (sizeof(uint32_t) * 2 + sizeof(uint8_t))) < 0 ? -1 : 0;
 };
 
-void *reader(struct device *dev) {
-	assert(dev);
-	unsigned char *tempBuffer =
-	    malloc((int)floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) * dev->config.channels));
-	unsigned char *perchanbuffs[dev->config.channels];
-	size_t perchanbuffoffset[dev->config.channels];
+void* devices::device::readerfunc(devices::device *dev) {
+	unsigned char *tempBuffer = new unsigned char[(int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) * dev->config.channels)];
+	std::vector<unsigned char *> prechanbuffs;
+	std::vector<size_t>perchanbuffoffset;
 	for(int i = 0; i < dev->config.channels; i++) {
-		perchanbuffs[i] = malloc(floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0)));
-		perchanbuffoffset[i] = 0;
+		prechanbuffs.push_back(new unsigned char[(int)(std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0)))]);
+		perchanbuffoffset.push_back(0);
 	}
 	uint8_t lastchannel = 0;
 	while(true) {
 		int readedData = read(dev->fd, tempBuffer,
-				      (int)floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) *
+				      (int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) *
 						 dev->config.channels));
 		if(readedData < 0) {
 			printf("read failed");
 			break;
 		};
+		//memcopy?
 		for(int i = 0; i < readedData; i++) {
-			if(lastchannel > (dev->config.channels - 1)) {
+			if(lastchannel > (this->config.channels - 1)) {
 				lastchannel = 0;
 			}
-			perchanbuffs[lastchannel][perchanbuffoffset[lastchannel]++] = tempBuffer[i]; //
+			prechanbuffs[lastchannel][perchanbuffoffset[lastchannel]++] = tempBuffer[i]; //
 			lastchannel++;
 		}
 		for(int i = 0; i < dev->config.channels; i++) {
-			writeBuffer(&dev->buffer[i], perchanbuffs[i], perchanbuffoffset[i]);
+			dev->buffer[i].writeBuffer(prechanbuffs[i], perchanbuffoffset[i]);
 		}
 		for(int i = 0; i < dev->config.channels; i++) {
 			perchanbuffoffset[i] = 0;
 		}
 	}
-	free(tempBuffer);
+	delete[] tempBuffer;
 
 	for(int i = 0; i < dev->config.channels; i++) {
-		free(perchanbuffs[i]);
+		prechanbuffs.clear();
 	}
 	return NULL;
 };
 
-struct device *devices_connect(struct scopeConf config, addrllroot *root, struct sockaddr *address,
+devices::device::device(struct scopeConf config, addrlist::root *root, struct sockaddr *address,
 			       socklen_t address_len) {
 	assert(root);
 	assert(address);
-	struct device *dev = malloc(sizeof(struct device));
-	if(dev == NULL) {
-		printf("out of memory\n");
-		return NULL;
-	}
-	memcpy(&(dev->config), &config, sizeof(struct scopeConf));
+	memcpy(&this->config, &config, sizeof(struct scopeConf));
 	// init ring buffer here
-	dev->buffer = malloc(sizeof(struct ringbuffer) * config.channels);
 	for(int i = 0; i < config.channels; i++) {
-		initBuffer(&(dev->buffer[i]),
-			   floor(config.sampleRate * ((double)config.duration / 1000.0)) * BUFFERMULTIPLIER);
-	}
-	dev->address = address;
-	addrll_connect(root, address);
-	dev->fd = socket(AF_INET, SOCK_STREAM, 0);
-	if(connect(dev->fd, address, address_len) != 0) {
-		close(dev->fd);
-		free(dev->buffer);
-		free(dev);
-		return NULL;
-	}
-	if(writeConfig(dev->fd, &dev->config) != 0) {
-		close(dev->fd);
-		free(dev->buffer);
-		free(dev);
-		return NULL;
+		ringbuffers::ringbuffer tbuff(floor(config.sampleRate * ((double)config.duration / 1000.0)) * BUFFERMULTIPLIER);
+		buffer.push_back(tbuff);
 	}
 
-	pthread_create(&dev->reader, NULL, (void *(*)(void *))reader, dev);
-	dev->next = NULL;
-	dev->prev = NULL;
-	pthread_rwlock_init(&dev->lock, NULL);
+	this->address = address;
+	root->connect(address);
+	this->fd = socket(AF_INET, SOCK_STREAM, 0);
+	if(connect(this->fd, address, address_len) != 0) {
+		close(this->fd);
+		buffer.clear();
+		throw "connection error";
+		return;
+	};
+	if(writeConfig(this->fd, &this->config) != 0) {
+		close(this->fd);
+		buffer.clear();
+		throw "connection error";
+		return;
+	}
 
-	return dev;
+	pthread_create(&this->reader, NULL, (void *(*)(void*))&this->readerfunc, this);
+	return;
 };
 
+/*
 int devices_append(struct device *to, struct device *dev) {
 	assert(to);
 	assert(dev);
@@ -128,8 +123,10 @@ int devices_append(struct device *to, struct device *dev) {
 	pthread_rwlock_unlock(&last->lock);
 	return 0;
 };
+*/
 
-int devices_disconnect(struct device *dev){
-	printf("not implemented\n");
-	return 0;
+devices::device::~device(){
+//int devices_disconnect(struct device *dev){
+	printf("not implemented disconnect, expect memory leak\n");
+	return;
 };

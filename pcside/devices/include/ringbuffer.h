@@ -1,5 +1,5 @@
-#ifndef DEVICES
-#define DEVICES
+#ifndef RINGBUFFER
+#define RINGBUFFER
 #include <pthread.h>
 namespace ringbuffers {
 
