@@ -285,7 +285,9 @@ void app_main(void) {
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
 			adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration);
-		}while(write(fd, readbuffer, readData)>0);
+			ESP_LOGI(MAIN_TAG, "read %lu dma", readData);
+		}while(write(fd, readbuffer, readData)>=0);
+		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);
 		adc_continuous_stop(adcHandler);
 		close(fd);

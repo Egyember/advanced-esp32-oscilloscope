@@ -2,6 +2,8 @@
 #define drawDev
 #include <devices.h>
 #include <raygui.h>
-void drawDevice(Rectangle bounds,  devices::device *dev);
-
+#include <vector>
+namespace draw{
+	void drawDeviceGraps(Rectangle bounds, devices::device *dev, std::vector<Color> colors);
+}
 #endif

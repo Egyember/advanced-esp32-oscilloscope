@@ -8,6 +8,7 @@
 #include <ringbuffer.h>
 #include <helpertypes.h>
 #include <vector>
+#include <samples.h>
 
 #ifndef BUFFERMULTIPLIER
 #define BUFFERMULTIPLIER 8
@@ -32,13 +33,19 @@ class device {
 		pthread_t reader;
 		static void *readerfunc(device *dev);
 
-		struct scopeConf config;
+		struct esp::scopeConf config;
+		std::vector< ringbuffers::ringbuffer*> buffer; //array of buffer headers one per channel
 	public:
-		device(struct scopeConf config, addrlist::root *root, struct sockaddr *address,
+		device(struct esp::scopeConf config, addrlist::root *root, struct sockaddr *address,
 			       socklen_t address_len);
 		~device();
 		//int devices_disconnect();
-		std::vector< ringbuffers::ringbuffer*> buffer; //array of buffer headers one per channel
+
+
+		/**
+		 * the number of streams shal be equal to the number of channels specified in config
+		 **/
+		int readSamples(std::vector<samples::sampleStream *> *out);
 };
 
 }

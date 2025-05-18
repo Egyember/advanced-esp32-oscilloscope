@@ -13,6 +13,7 @@
 #include <iostream>
 
 #include <drawDevices.h>
+#include <vector>
 
 int main(void) {
 	Pstate state = (Pstate)malloc(sizeof(struct state));
@@ -28,6 +29,10 @@ int main(void) {
 	printf("width: %f, height: %f, refresh rate: %d, mointor count: %d\n", width, height, RefreshRate,
 	       monitorCount);
 	bool drawdev = false;
+	bool connected = false;
+	std::vector<samples::sampleStream*> *sbuff = new std::vector<samples::sampleStream*>; 
+	samples::sampleStream *sstream = new samples::sampleStream;
+	sbuff->push_back(sstream);
 	while(!WindowShouldClose()) { // Detect window close button or ESC key
 		int len = state->addrRoot->lenth();
 		char status[128] = {0};
@@ -36,20 +41,47 @@ int main(void) {
 		ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 		GuiLabel((Rectangle){0, 0, width, height}, status);
 		if(drawdev) {
-			drawDevice((Rectangle){0, 0, width, height}, (devices::device*)&state->devices->list.front());
+	//		drawDevice((Rectangle){0, 0, width, height}, (devices::device*)&state->devices->list.front());
 		}
 		if(len > 0) {
+			if (!connected) {
+			
 			if(GuiButton((Rectangle){0, 0, 100, 100}, "connect")) {
-				struct scopeConf conf = {
+				struct esp::scopeConf conf = {
 					.channels = 1,
 					.sampleRate = 40000,
 					.duration = 100,
 				};
 				 devices::device* dev = new devices::device(conf, state->addrRoot, &state->addrRoot->next->addr, sizeof(struct sockaddr_in));
 				state->devices->list.push_back(dev);
+				connected = true;
+			}
+			}else {
+
+				state->devices->list.front()->readSamples(sbuff);
+				std::cout << "pringting\n";
+				while (!sstream->empty()) {
+					samples::sample sam = sstream->front();
+					sstream->pop();
+					printf("volt: %f\n", sam.voltage);
+				}
 			}
 		}
 		EndDrawing();
+		/*
+		   if (state->devices->list.size()>0) {
+		   unsigned char rbuff[80];
+		   int readb = state->devices->list.front()->buffer.front()->readBuffer(rbuff, 80);
+		   if (readb == 0) {
+		   continue;
+		   }
+		   for (int i = 0; i<readb; i++) {
+		   printf("%x", rbuff[i]);
+		   };
+		   printf("\n");
+		   }
+		   */
+
 	};
 	CloseWindow(); // Close window and OpenGL context
 	return 0;

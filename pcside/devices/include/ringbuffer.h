@@ -7,10 +7,15 @@ namespace ringbuffers {
 		private:
 			unsigned char *bufferStart;
 			size_t bufferLength;
-			pthread_mutex_t writeLock;
 			unsigned char *wrPrt;
-			pthread_mutex_t readLock;
 			unsigned char *rdPrt;
+			pthread_rwlock_t lock;
+			pthread_mutex_t locklock;
+			size_t freeToWrite();
+			size_t readable();
+			void rdlock();
+			void wrlock();
+			void upgrade();
 		public:
 			//int initBuffer(size_t size);
 			ringbuffer(size_t size);
