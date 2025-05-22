@@ -11,6 +11,8 @@ target_include_directories(devices PUBLIC
 )
 #target_compile_options(devices PRIVATE -DNDEBUG)
 #target_compile_options(devices PRIVATE -DDEBUGSAMPLE)
+#target_compile_options(devices PRIVATE -DDEBUGRINGBUFFER)
+
 target_link_libraries(devices PRIVATE
 	samples
 	helper

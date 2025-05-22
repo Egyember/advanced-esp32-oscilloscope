@@ -16,6 +16,7 @@
 #include <vector>
 #include <espsiteTypes.h>
 //debug all if NDDEBUG
+//
 #ifdef NDEBUG
 #define DEBUGINIT
 #define DEBUGREAD
@@ -71,7 +72,7 @@ void *devices::device::readerfunc(devices::device *dev) {
 		std::cout << "read from dev " << readedData << " bytes.\n";
 #endif
 		if(readedData < 0) {
-			printf("read failed");
+			printf("read failed\n");
 			break;
 		};
 
@@ -213,7 +214,10 @@ int devices::device::readSamples(std::vector<samples::sampleStream *> *out) {
 		unsigned int r;
 		do {
 			r = cbuff->readBuffer(buff, sizeof(buff));
-			for (unsigned long int j = 0; j< sizeof(buff) || j <r; j+=esp::SOC_ADC_DIGI_RESULT_BYTES) {
+#ifdef DEBUGSAMPLE
+			std::cout << "read " << r << " bytes from rb\n";
+#endif
+			for (unsigned long int j = 0; j< sizeof(buff) && j <r; j+=esp::SOC_ADC_DIGI_RESULT_BYTES) {
 				uint16_t samp = *((uint16_t*)&buff[j]);
 				uint16_t value = (samp & SAMPLEMASK);
 				uint16_t chan = (samp & CHANMASK) >> 12;
