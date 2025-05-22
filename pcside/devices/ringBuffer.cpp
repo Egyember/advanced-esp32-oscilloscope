@@ -36,7 +36,7 @@ ringbuffer::ringbuffer(size_t size) {
 };
 
 ringbuffer::~ringbuffer() {
-	delete[] this->_data;
+	delete this->_data;
 	pthread_mutex_destroy(&this->lock);
 }
 
