@@ -40,6 +40,31 @@ ringbuffer::~ringbuffer() {
 	pthread_mutex_destroy(&this->lock);
 }
 
+
+#ifdef DEBUGRINGBUFFER
+int ringbuffer::print(){
+	return print(32);
+};
+int ringbuffer::print(int hexwith){
+	pthread_mutex_lock(&this->lock);
+	std::cout << "empty: " << empty << "\n";
+	std::cout << "readindex: " << readindex << "\n";
+	std::cout << "writeindex: " << writeindex << "\n";
+	std::cout << "maxindex: " << maxindex << "\n";
+	int i = 0;
+	for (unsigned char c : *_data) {
+		printf("%02x", c);
+		if (++i == hexwith) {
+			printf("\n");
+			i=0;
+		}
+	}
+	printf("\n");
+	pthread_mutex_unlock(&this->lock);
+	return 0;
+};
+#endif
+
 int ringbuffer::readBuffer(unsigned char *dest, size_t size) {
 	if(dest == NULL) {
 		if(size == 0) {
@@ -50,6 +75,7 @@ int ringbuffer::readBuffer(unsigned char *dest, size_t size) {
 	}
 #ifdef DEBUGRINGBUFFER
 	std::cout << "ring buffer read started: " << size << "\n";
+	print();
 #endif
 	pthread_mutex_lock(&this->lock);
 	if(empty) {
@@ -65,26 +91,30 @@ int ringbuffer::readBuffer(unsigned char *dest, size_t size) {
 	if(writeindex < readindex) {
 		canreadsec = writeindex - (size - canread);
 	}
-	if(canread > size) {
-#ifdef DEBUGRINGBUFFER
-		std::cout << "debug\n";
-#endif
+	if(canread >= size) {
 		memcpy(dest, &_data->data()[readindex], size);
+#ifdef DEBUGRINGBUFFER
+		memset(&_data->data()[readindex], 0, size);
+#endif
 		writen += size;
 		readindex += size;
-	} else {
-#ifdef DEBUGRINGBUFFER
-		std::cout << "debug2 " << canread << "\n";
-#endif
+	} else { //posible but with readindex in this branch
 		memcpy(dest, &_data->data()[readindex], canread);
+#ifdef DEBUGRINGBUFFER
+		memset(&_data->data()[readindex], 0, canread);
+#endif
 		writen += canread;
 		memcpy(&dest[canread], _data->data(), canreadsec);
+#ifdef DEBUGRINGBUFFER
+		memset(_data->data(), 0, canreadsec);
+#endif
 		writen += canreadsec;
 		readindex = canreadsec;
 	}
 	pthread_mutex_unlock(&this->lock);
 #ifdef DEBUGRINGBUFFER
 	std::cout << "ring buffer read finished: " << writen << "\n";
+	print();
 #endif
 	return writen;
 };
@@ -92,7 +122,9 @@ int ringbuffer::readBuffer(unsigned char *dest, size_t size) {
 size_t ringbuffer::writeBuffer(unsigned char *src, size_t size) {
 #ifdef DEBUGRINGBUFFER
 	std::cout << "ring buffer write started: " << size << "\n";
+	print();
 #endif
+	pthread_mutex_lock(&this->lock);
 	if(empty) {
 		if(size > 0) {
 			empty = false;
@@ -101,7 +133,6 @@ size_t ringbuffer::writeBuffer(unsigned char *src, size_t size) {
 	if(size > maxindex) {
 		size = maxindex;
 	};
-	pthread_mutex_lock(&this->lock);
 	size_t writeable = maxindex - writeindex;
 	if(size < writeable) {
 		memcpy(&_data->data()[writeindex], src, size);
@@ -124,6 +155,7 @@ size_t ringbuffer::writeBuffer(unsigned char *src, size_t size) {
 	pthread_mutex_unlock(&this->lock);
 #ifdef DEBUGRINGBUFFER
 	std::cout << "ring buffer write finished: " << size << "\n";
+	print();
 #endif
 	return size;
 };
