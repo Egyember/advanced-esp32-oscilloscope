@@ -1,6 +1,5 @@
 #include "broadcaster.h"
 #include "btconfig.h"
-#include "cc.h"
 #include "esp_adc/adc_continuous.h"
 #include "esp_err.h"
 #include "esp_event.h"
@@ -137,6 +136,22 @@ int readConfig(int soc, struct scopeConf *config){
 
 };
 
+int hexdump(unsigned char *src, size_t len, unsigned int with){
+	if (!src) {
+		return -1;
+	}
+	unsigned int l = 0;
+	for (size_t i = 0; i < len; i++) {
+		printf("%02x", src[i]);
+		if (++l == with) {
+			printf("\n");
+			l = 0;
+		}
+	}
+	printf("\n");
+	return 0;
+};
+
 void app_main(void) {
 	ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -256,7 +271,7 @@ void app_main(void) {
 
 		adc_continuous_handle_cfg_t adcConfigHandler = {
 		    .conv_frame_size = frameSize,
-		    .max_store_buf_size = frameSize * 4,
+		    .max_store_buf_size = frameSize,
 		};
 		adc_continuous_handle_t adcHandler = NULL;
 		ESP_ERROR_CHECK(adc_continuous_new_handle(&adcConfigHandler, &adcHandler));
@@ -281,11 +296,15 @@ void app_main(void) {
 		adc_continuous_start(adcHandler);
 		ESP_LOGI(MAIN_TAG, "adc running");
 		uint8_t *readbuffer = malloc(sizeof(uint8_t)*frameSize); //1448 is the max tcp data segment size
+		for (int i = 0; i < sizeof(readbuffer); i++) {
+			readbuffer[i] = -1;
+		}
 		uint32_t readData;
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
-			adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration);
+			ESP_ERROR_CHECK(adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30)); //+30 for dma latency 
 			ESP_LOGI(MAIN_TAG, "read %lu dma", readData);
+			hexdump(readbuffer, readData, 16);
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);

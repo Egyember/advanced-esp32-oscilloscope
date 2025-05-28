@@ -49,8 +49,8 @@ int main(void) {
 				if(GuiButton((Rectangle){0, 0, 100, 100}, "connect")) {
 					struct esp::scopeConf conf = {
 					    .channels = 1,
-					    .sampleRate = 40000,
-					    .duration = 100,
+					    .sampleRate = 20000,
+					    .duration = 50,
 					};
 					devices::device *dev =
 					    new devices::device(conf, state->addrRoot, &state->addrRoot->next->addr,
@@ -62,11 +62,10 @@ int main(void) {
 				devices::device * dev= state->devices->list.front();
 				std::cout << "pringting\n";
 				dev->readSamples(sbuff);
-				while(!sstream->empty()) {
-					samples::sample sam = sstream->front();
+				printf("volt: %f\n", sstream->back().voltage);
+	/*			while(!sstream->empty()) {
 					sstream->pop();
-					printf("volt: %f\n", sam.voltage);
-				}
+				}*/
 			}
 		}
 		EndDrawing();

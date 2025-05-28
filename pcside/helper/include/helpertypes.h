@@ -2,6 +2,7 @@
 #define HELPER
 #include <list>
 #include <pthread.h>
+#include <stdio.h>
 
 namespace helper{
 template<typename T>class thslist{
@@ -23,7 +24,9 @@ template<typename T> thslist<T>::thslist(){
 
 template<typename T> thslist<T>::~thslist(){
 	pthread_rwlock_destroy(&this->lock);
-}
+};
+
+ int hexdump(unsigned char *src, size_t len, unsigned int with = 16);
 }
 
 #endif

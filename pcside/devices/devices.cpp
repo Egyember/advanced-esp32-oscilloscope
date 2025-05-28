@@ -29,11 +29,13 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <string.h>
+#include <helpertypes.h>
 #endif
 #ifdef DEBUGSAMPLE
 #include <bitset>
 #endif
 
+#include <helpertypes.h>
 
 //esp32 technical referace manual 29-5
 #define MAXVOLT (2.450)
@@ -70,6 +72,7 @@ void *devices::device::readerfunc(devices::device *dev) {
 						      dev->config.channels));
 #ifdef DEBUGREAD
 		std::cout << "read from dev " << readedData << " bytes.\n";
+		helper::hexdump(tempBuffer, readedData);
 #endif
 		if(readedData < 0) {
 			printf("read failed\n");
@@ -234,7 +237,13 @@ int devices::device::readSamples(std::vector<samples::sampleStream *> *out) {
 				std::bitset<16> cm(CHANMASK);
 				std::cout << "channel m: " << cm << "\n";
 #endif
-				assert(chan == i);
+				if(chan != i){ //handle when this broken ass hardware send fucked up samples
+#ifdef DEBUGSAMPLE
+				std::cout << "broken garbage hardware\n";
+#endif
+					(*out)[i]->push(samples::sample(-1));
+					continue;
+				};
 				float volt = ((float)(value)/(float)SAMPLEMAX) * (float)MAXVOLT;
 				(*out)[i]->push(samples::sample(volt));
 			}

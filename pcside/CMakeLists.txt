@@ -6,7 +6,7 @@ project(
 	LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "") # hack to make it work
 #add_compile_options( -Wall -O2 --std=c++17 -g )
-add_compile_options( -Wall -O0 --std=c++17 -g )
+add_compile_options( -Wall -O0 --std=c++17 -g -fstack-protector-strong)
 add_executable(main main.cpp)
 add_executable(test test.cpp)
 target_include_directories(main PUBLIC

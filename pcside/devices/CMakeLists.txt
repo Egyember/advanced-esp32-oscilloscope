@@ -18,4 +18,5 @@ target_link_libraries(devices PRIVATE
 	helper
 	addrlist
 	pthread
+	helper
 )

@@ -17,7 +17,7 @@ namespace ringbuffers {
 			//int initBuffer(size_t size);
 			ringbuffer(size_t size);
 			~ringbuffer();
-			int readBuffer(unsigned char *dest, size_t size);
+			size_t readBuffer(unsigned char *dest, size_t size);
 			size_t writeBuffer(unsigned char *dest, size_t size);
 #ifdef DEBUGRINGBUFFER
 			int print();
