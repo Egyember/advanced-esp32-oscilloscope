@@ -4,3 +4,5 @@ using namespace samples;
 sample::sample(float volt){
 	this->voltage = volt;
 };
+sample::sample(){
+};

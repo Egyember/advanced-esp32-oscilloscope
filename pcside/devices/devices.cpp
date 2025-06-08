@@ -38,7 +38,7 @@
 #include <helpertypes.h>
 
 //esp32 technical referace manual 29-5
-#define MAXVOLT (2.450)
+#define MAXVOLT (3.120)
 #define SAMPLEMAX (0b0000111111111111)
 #define SAMPLEMASK (0b0000111111111111)
 #define CHANMASK (~SAMPLEMASK)
@@ -212,6 +212,7 @@ int devices::device::readSamples(std::vector<samples::sampleStream *> *out) {
 	};
 	ringbuffers::ringbuffer *cbuff = NULL;
 	for (unsigned int i=0; i<this->buffer.size(); i++) {
+		(*out)[i]->wrlock();
 		cbuff = this->buffer[i];
 		unsigned char buff[esp::SOC_ADC_DIGI_RESULT_BYTES*128] = {0};
 		unsigned int r;
@@ -241,16 +242,17 @@ int devices::device::readSamples(std::vector<samples::sampleStream *> *out) {
 #ifdef DEBUGSAMPLE
 				std::cout << "broken garbage hardware\n";
 #endif
-					(*out)[i]->push(samples::sample(-1));
+					(*out)[i]->_data.push_back(samples::sample(-1));
 					continue;
 				};
 				float volt = ((float)(value)/(float)SAMPLEMAX) * (float)MAXVOLT;
-				(*out)[i]->push(samples::sample(volt));
+				(*out)[i]->_data.push_back(samples::sample(volt));
 			}
 		}while (r==0);
 #ifdef DEBUGSAMPLE
 		std::cout << "out of samples\n";
 #endif
+		(*out)[i]->unlock();
 	}
 	return 0;
 };

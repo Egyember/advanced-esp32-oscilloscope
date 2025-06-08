@@ -2,7 +2,6 @@
 #define RINGBUFFER
 #include <pthread.h>
 #include <vector>
-#include <atomic>
 namespace ringbuffers {
 
 	class ringbuffer{
@@ -19,6 +18,7 @@ namespace ringbuffers {
 			~ringbuffer();
 			size_t readBuffer(unsigned char *dest, size_t size);
 			size_t writeBuffer(unsigned char *dest, size_t size);
+			void clear();
 #ifdef DEBUGRINGBUFFER
 			int print();
 			int print(int hexwith);

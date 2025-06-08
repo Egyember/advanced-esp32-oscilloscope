@@ -1,7 +1,9 @@
 #include "devices.h"
 #include "helpertypes.h"
+#include <recorder.h>
 #include <addrlist.h>
 #include <iostream>
+#include <list>
 #include <mainTypes.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -11,14 +13,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <fstream>
 #include <drawDevices.h>
 #include <vector>
 
 int main(void) {
-	Pstate state = (Pstate)malloc(sizeof(struct state));
-	state->addrRoot = new addrlist::root;
-	state->devices = new helper::thslist<devices::device *>;
+	state *Mstate = new state;
+	Mstate->devices = new helper::thwraper<std::list<devices::device *>>();
 	InitWindow(0, 0, "teszt");
 	int monitorCount = GetMonitorCount();
 	float width = (monitorCount > 0) ? GetMonitorWidth(0) : 360.0;
@@ -33,13 +34,18 @@ int main(void) {
 	std::vector<samples::sampleStream *> *sbuff = new std::vector<samples::sampleStream *>;
 	samples::sampleStream *sstream = new samples::sampleStream;
 	sbuff->push_back(sstream);
+
+	int samplelast = 0;
+	int lastdelta = 0;
+	int fcount = 0;
+
 	while(!WindowShouldClose()) { // Detect window close button or ESC key
-		int len = state->addrRoot->lenth();
+		int len = Mstate->addrRoot.lenth();
 		char status[128] = {0};
 		snprintf(status, 128, "found %d dev\n", len);
 		BeginDrawing();
 		ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-		GuiLabel((Rectangle){0, 0, width, height}, status);
+		GuiLabel((Rectangle){100, 0, 100, 100}, status);
 		if(drawdev) {
 			//		drawDevice((Rectangle){0, 0, width, height},
 			//(devices::device*)&state->devices->list.front());
@@ -49,27 +55,66 @@ int main(void) {
 				if(GuiButton((Rectangle){0, 0, 100, 100}, "connect")) {
 					struct esp::scopeConf conf = {
 					    .channels = 1,
-					    .sampleRate = 20000,
-					    .duration = 50,
+					    .sampleRate = 40000,
+					    .duration = 80,
 					};
 					devices::device *dev =
-					    new devices::device(conf, state->addrRoot, &state->addrRoot->next->addr,
+					    new devices::device(conf, &Mstate->addrRoot, &Mstate->addrRoot.next->addr,
 								sizeof(struct sockaddr_in));
-					state->devices->list.push_back(dev);
+					Mstate->devices->wrlock();
+					Mstate->devices->_data.push_back(dev);
+					Mstate->devices->unlock();
+					for (int i = 0; i < conf.channels; i++) {
+						record::recorder* rec = new record::recorder(new record::edgetriger(1.0, record::RISEING), new record::edgetriger(1.0, record::FALEING), sbuff->front() ,&Mstate->recordstate.state, (size_t)3200);
+						std::vector<record::recorder*> vec = {rec};
+						Mstate->recordstate.recorders.push_back(vec);
+					}
 					connected = true;
 				};
 			} else {
-				devices::device * dev= state->devices->list.front();
-				std::cout << "pringting\n";
+				Mstate->devices->rdlock();
+				devices::device * dev= Mstate->devices->_data.front();
 				dev->readSamples(sbuff);
-				printf("volt: %f\n", sstream->back().voltage);
+				Mstate->devices->unlock();
 	/*			while(!sstream->empty()) {
 					sstream->pop();
 				}*/
 			}
 		}
+		if (!Mstate->recordstate.recorders.empty()){
+			auto front = Mstate->recordstate.recorders.front();
+			auto records = front[0]->getRecords();
+			std::string text = "";
+			text += "recorded: " + std::to_string(records.size()) + "\n";
+			text += "last value: "  + std::to_string( ((records.size() != 0)? records.back().voltage : -1.0)) + "\n";
+			text += "queue size: "  + std::to_string( sstream->_data.size()) + "\n";
+			if (fcount >= RefreshRate) {
+				fcount = 0;
+				auto recnow = records.size();
+				lastdelta = recnow - samplelast;
+				samplelast = recnow;
+			}
+			text += "sample rate: "  + std::to_string(lastdelta) + "\n";
+			GuiLabel((Rectangle){200, 0, 100,100}, text.data());
+
+		}else{
+		GuiLabel((Rectangle){200, 0, 100,100}, "asd");
+		};
+
 		EndDrawing();
+		printf("mainok\n");
+		fcount++;
 	};
 	CloseWindow(); // Close window and OpenGL context
+	std::ofstream plot("plot.txt");
+	auto recs = Mstate->recordstate.recorders.front()[0]->getRecords(); 
+	plot << "array A[" << recs.size() +1  << "] = [ ";
+	for (samples::sample &i : recs) {
+		plot << i.voltage << ", ";	
+	}
+	plot << "0 ]\n ";	
+	plot << "plot A with points title \"Array A\"\n";
+	plot << "pause -1\n";
+	plot.close();
 	return 0;
 }

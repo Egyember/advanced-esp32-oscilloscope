@@ -16,13 +16,16 @@ target_include_directories(test PUBLIC
 	"${PROJECT_SOURCE_DIR}/include"
 )
 add_subdirectory(helper)
+add_subdirectory(sample)
+add_subdirectory(recorder)
 add_subdirectory(addrlist)
 add_subdirectory(rayguiimpl)
 add_subdirectory(devices)
 add_subdirectory(draw)
-add_subdirectory(sample)
 target_link_libraries(main PRIVATE
 	helper
+	samples
+	recorder
 	pthread
 	raylib
 	rayguiimpl
@@ -33,6 +36,7 @@ target_link_libraries(main PRIVATE
 )
 
 target_link_libraries(test PRIVATE
+	samples
 	helper
 	pthread
 	raylib

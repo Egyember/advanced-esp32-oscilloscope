@@ -303,8 +303,6 @@ void app_main(void) {
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
 			ESP_ERROR_CHECK(adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30)); //+30 for dma latency 
-			ESP_LOGI(MAIN_TAG, "read %lu dma", readData);
-			hexdump(readbuffer, readData, 16);
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);

@@ -8,10 +8,13 @@
 #include <string.h>
 #include <vector>
 
+#define DEBUGRINGBUFFEROVERLOAD
 #ifdef NDEBUG
 #define DEBUGRINGBUFFER
+#define DEBUGRINGBUFFEROVERLOAD
 #endif
-#if defined(NDEBUG) || defined(DEBUGRINGBUFFER)
+#if defined(NDEBUG) || defined(DEBUGRINGBUFFER) || defined(DEBUGRINGBUFFEROVERLOAD)
+
 #include <iostream>
 #endif
 
@@ -153,8 +156,8 @@ size_t ringbuffer::writeBuffer(unsigned char *src, size_t size) {
 		} else {
 			writeindex += size;
 			readindex = writeindex;
-#ifdef DEBUGRINGBUFFER
-	std::cout << "pushed read index\n";
+#if  defined(DEBUGRINGBUFFER) || defined(DEBUGRINGBUFFEROVERLOAD)
+			std::cout << "pushed read index\n";
 #endif
 		}
 	} else {
@@ -181,4 +184,13 @@ size_t ringbuffer::writeBuffer(unsigned char *src, size_t size) {
 	print();
 #endif
 	return size;
+};
+
+
+void ringbuffer::clear(){
+	pthread_mutex_lock(&this->lock);
+	readindex = 0;
+	writeindex = 0;
+	empty = true;
+	pthread_mutex_unlock(&this->lock);
 };

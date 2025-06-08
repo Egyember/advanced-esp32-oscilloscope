@@ -1,6 +1,7 @@
 #ifndef SAMPLES
 #define SAMPLES
 
+#include <helpertypes.h>
 #include <queue>
 namespace samples{
 	class sample{
@@ -8,7 +9,8 @@ namespace samples{
 		float voltage;
 //		unsigned long long int time;
 		sample(float volt);
+		sample();
 	};
-	typedef std::queue<sample> sampleStream;
+	typedef helper::thwraper<std::deque<sample>> sampleStream;
 }
 #endif
