@@ -33,9 +33,9 @@ class device {
 		pthread_t reader;
 		static void *readerfunc(device *dev);
 
+	public:
 		struct esp::scopeConf config;
 		std::vector< ringbuffers::ringbuffer*> buffer; //array of buffer headers one per channel
-	public:
 		device(struct esp::scopeConf config, addrlist::root *root, struct sockaddr *address,
 			       socklen_t address_len);
 		~device();
@@ -48,5 +48,6 @@ class device {
 		int readSamples(std::vector<samples::sampleStream *> *out);
 };
 
+samples::sample parseSample(uint16_t raw);
 }
 #endif

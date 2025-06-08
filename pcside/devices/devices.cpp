@@ -203,6 +203,25 @@ devices::device::~device() {
 	return;
 };
 
+samples::sample devices::parseSample(uint16_t raw){
+	uint16_t value = (raw & SAMPLEMASK);
+	uint16_t chan = (raw & CHANMASK) >> 12;
+	float volt = ((float)(value)/(float)SAMPLEMAX) * (float)MAXVOLT;
+#ifdef DEBUGSAMPLE
+				std::bitset<16> r(raw);
+				std::cout << "raw value: " << r << "\n";
+				std::cout << "raw number " << raw << "\n";
+				std::bitset<16> v(value);
+				std::cout << "value    : " << v << "\n";
+				std::cout << "value num: " << value << "\n";
+				std::bitset<16> c(chan);
+				std::cout << "channel  : " << c << "\n";
+				std::cout << "channel n: " << chan << "\n";
+				std::bitset<16> cm(CHANMASK);
+				std::cout << "channel m: " << cm << "\n";
+#endif
+	return samples::sample(volt, chan);
+};
 int devices::device::readSamples(std::vector<samples::sampleStream *> *out) {
 	assert(out != nullptr);
 	assert(out->size() == this->buffer.size());
@@ -223,30 +242,7 @@ int devices::device::readSamples(std::vector<samples::sampleStream *> *out) {
 #endif
 			for (unsigned long int j = 0; j< sizeof(buff) && j <r; j+=esp::SOC_ADC_DIGI_RESULT_BYTES) {
 				uint16_t samp = *((uint16_t*)&buff[j]);
-				uint16_t value = (samp & SAMPLEMASK);
-				uint16_t chan = (samp & CHANMASK) >> 12;
-#ifdef DEBUGSAMPLE
-				std::bitset<16> r(samp);
-				std::cout << "raw value: " << r << "\n";
-				std::cout << "raw number " << samp << "\n";
-				std::bitset<16> v(value);
-				std::cout << "value    : " << v << "\n";
-				std::cout << "value num: " << value << "\n";
-				std::bitset<16> c(chan);
-				std::cout << "channel  : " << c << "\n";
-				std::cout << "channel n: " << chan << "\n";
-				std::bitset<16> cm(CHANMASK);
-				std::cout << "channel m: " << cm << "\n";
-#endif
-				if(chan != i){ //handle when this broken ass hardware send fucked up samples
-#ifdef DEBUGSAMPLE
-				std::cout << "broken garbage hardware\n";
-#endif
-					(*out)[i]->_data.push_back(samples::sample(-1));
-					continue;
-				};
-				float volt = ((float)(value)/(float)SAMPLEMAX) * (float)MAXVOLT;
-				(*out)[i]->_data.push_back(samples::sample(volt));
+				(*out)[i]->_data.push_back(parseSample(samp));
 			}
 		}while (r==0);
 #ifdef DEBUGSAMPLE

@@ -7,7 +7,9 @@ target_include_directories(recorder PUBLIC
 	"${CMAKE_CURRENT_LIST_DIR}/include"
 )
 
-target_link_libraries(recorder PRIVATE
+target_link_libraries(recorder PUBLIC
+	devices
 	samples
 	helper
+
 )

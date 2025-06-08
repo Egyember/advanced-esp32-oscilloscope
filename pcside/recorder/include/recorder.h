@@ -4,6 +4,7 @@
 #include <list>
 #include <samples.h>
 #include <vector>
+#include <ringbuffer.h>
 namespace record {
 enum states { RECORED, STOP };
 
@@ -37,7 +38,7 @@ class recorder {
       private:
 	triger *startTrig;
 	triger *stopTrig;
-	samples::sampleStream *samplest;
+	ringbuffers::ringbuffer *samplest;
 	std::atomic<enum states> *recstate;
 	pthread_t thId;
 	helper::thwraper<std::vector<samples::sample>> buffer;
@@ -48,7 +49,7 @@ class recorder {
 	/**
 	 * this function takes ownship of the two trigers
 	 */
-	recorder(triger *startTriger, triger *stopTriger, samples::sampleStream *samplestream,
+	recorder(triger *startTriger, triger *stopTriger, ringbuffers::ringbuffer *samplestream,
 		 std::atomic<enum states> *state, size_t buffsize);
 	~recorder();
 	std::vector<samples::sample> getRecords();

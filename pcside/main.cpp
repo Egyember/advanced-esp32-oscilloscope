@@ -31,10 +31,11 @@ int main(void) {
 	       monitorCount);
 	bool drawdev = false;
 	bool connected = false;
+	/*
 	std::vector<samples::sampleStream *> *sbuff = new std::vector<samples::sampleStream *>;
 	samples::sampleStream *sstream = new samples::sampleStream;
 	sbuff->push_back(sstream);
-
+*/
 	int samplelast = 0;
 	int lastdelta = 0;
 	int fcount = 0;
@@ -64,18 +65,20 @@ int main(void) {
 					Mstate->devices->wrlock();
 					Mstate->devices->_data.push_back(dev);
 					Mstate->devices->unlock();
+					Mstate->devices->rdlock();
 					for (int i = 0; i < conf.channels; i++) {
-						record::recorder* rec = new record::recorder(new record::edgetriger(1.0, record::RISEING), new record::edgetriger(1.0, record::FALEING), sbuff->front() ,&Mstate->recordstate.state, (size_t)3200);
+						record::recorder* rec = new record::recorder(new record::edgetriger(1.0, record::RISEING), new record::edgetriger(1.0, record::FALEING), Mstate->devices->_data.back()->buffer[i] ,&Mstate->recordstate.state, (size_t)3200);
 						std::vector<record::recorder*> vec = {rec};
 						Mstate->recordstate.recorders.push_back(vec);
 					}
+					Mstate->devices->unlock();
 					connected = true;
 				};
 			} else {
-				Mstate->devices->rdlock();
-				devices::device * dev= Mstate->devices->_data.front();
-				dev->readSamples(sbuff);
-				Mstate->devices->unlock();
+			//	Mstate->devices->rdlock();
+			//	devices::device * dev= Mstate->devices->_data.front();
+			//	dev->readSamples(sbuff);
+			//	Mstate->devices->unlock();
 	/*			while(!sstream->empty()) {
 					sstream->pop();
 				}*/
@@ -87,7 +90,7 @@ int main(void) {
 			std::string text = "";
 			text += "recorded: " + std::to_string(records.size()) + "\n";
 			text += "last value: "  + std::to_string( ((records.size() != 0)? records.back().voltage : -1.0)) + "\n";
-			text += "queue size: "  + std::to_string( sstream->_data.size()) + "\n";
+			//text += "queue size: "  + std::to_string( sstream->_data.size()) + "\n";
 			if (fcount >= RefreshRate) {
 				fcount = 0;
 				auto recnow = records.size();

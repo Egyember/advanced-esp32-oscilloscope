@@ -1,18 +1,20 @@
+#include "devices.h"
 #include <pthread.h>
 #include <recorder.h>
+#include <ringbuffer.h>
 #include <samples.h>
 #include <unistd.h>
 #include <vector>
 
+#define READBUFFERSIZE 128
+
 using namespace record;
 
-triger::~triger(){};
+triger::~triger() {};
 
-triger::triger(){};
+triger::triger() {};
 
-bool triger::shouldtrigger(samples::sample){
-	return false;
-};
+bool triger::shouldtrigger(samples::sample) { return false; };
 edgetriger::edgetriger(samples::sample ref, enum edgeTrigerType type) {
 	this->refv = ref;
 	this->type = type;
@@ -45,7 +47,7 @@ bool nevertriger::shouldtrigger(samples::sample samp) { return false; };
 nevertriger::nevertriger() {};
 nevertriger::~nevertriger() { return; };
 
-recorder::recorder(triger *startTriger, triger *stopTriger, samples::sampleStream *samplestream,
+recorder::recorder(triger *startTriger, triger *stopTriger, ringbuffers::ringbuffer *samplestream,
 		   std::atomic<enum states> *state, size_t buffsize) {
 	startTrig = startTriger;
 	stopTrig = stopTriger;
@@ -64,29 +66,29 @@ recorder::~recorder() {
 };
 
 void recorder::executor(recorder *thispointer) {
+	uint16_t readbuff[READBUFFERSIZE] = {0};
+	size_t read = 0;
 	while(true) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-		thispointer->samplest->rdlock();
-		bool emp = thispointer->samplest->_data.empty();
-		thispointer->samplest->unlock();
-		if(!emp) {
-			thispointer->samplest->wrlock();
-			samples::sample sampl = thispointer->samplest->_data.front();
-			thispointer->samplest->_data.pop_front();
-			thispointer->samplest->unlock();
-			if(*thispointer->recstate == RECORED) {
-				thispointer->buffer.wrlock();
-				thispointer->buffer._data.push_back(sampl);
-				thispointer->buffer.unlock();
-				if(thispointer->stopTrig->shouldtrigger(sampl)) {
-					*thispointer->recstate = STOP;
-				};
-			} else {
-				if(thispointer->startTrig->shouldtrigger(sampl)) {
-					*thispointer->recstate = RECORED;
-				};
+		read = thispointer->samplest->readBuffer((unsigned char *)readbuff, READBUFFERSIZE*sizeof(uint16_t));
+		if(read != 0) {
+			for (int i = 0; i < read/sizeof(uint16_t); i++) {
+				auto samp = devices::parseSample(readbuff[i]);
+				if(*thispointer->recstate == RECORED) {
+					thispointer->buffer.wrlock();
+					thispointer->buffer._data.push_back(samp);
+					thispointer->buffer.unlock();
+					if(thispointer->stopTrig->shouldtrigger(samp)) {
+						*thispointer->recstate = STOP;
+					};
+				} else {
+					if(thispointer->startTrig->shouldtrigger(samp)) {
+						*thispointer->recstate = RECORED;
+					};
+				}
+
 			}
-		}else {
+		} else {
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 			usleep(50);
 		}
@@ -107,7 +109,4 @@ void recorder::clear() {
 	this->buffer.unlock();
 };
 
-
-recorederstate::recorederstate(){
-	state = STOP;
-};
+recorederstate::recorederstate() { state = STOP; };

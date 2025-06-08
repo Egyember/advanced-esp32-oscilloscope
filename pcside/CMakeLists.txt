@@ -25,12 +25,12 @@ add_subdirectory(draw)
 target_link_libraries(main PRIVATE
 	helper
 	samples
+	devices
 	recorder
 	pthread
 	raylib
 	rayguiimpl
 	addrlist
-	devices
 	draw
 	m
 )
