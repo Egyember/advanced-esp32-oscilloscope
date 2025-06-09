@@ -1,18 +1,6 @@
 #include "broadcaster.h"
 #include "btconfig.h"
 
-
-#include "esp_adc/adc_continuous.h"
-
-#include "esp_adc/../../adc_continuous_internal.h"
-
-#define ADC_LL_DEFAULT_CONV_LIMIT_NUM    255
-#include "hal/adc_ll.h"
-#define ADC_LL_DEFAULT_CONV_LIMIT_NUM    255
-
-#include "hal/adc_types.h"
-
-
 #include "esp_err.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -164,15 +152,6 @@ int hexdump(unsigned char *src, size_t len, unsigned int with){
 	return 0;
 };
 
-adc_dma_intr_func_t old;
-
-uint dmac = 0;
-
-bool IRAM_ATTR test(void *arg){
-	dmac +=1;
-	return old(arg);
-}
-
 void app_main(void) {
 	ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -290,50 +269,11 @@ void app_main(void) {
 		    (uint32_t)floor((float)config.sampleRate * ((float)config.duration / 1000.0) * (float)SOC_ADC_DIGI_RESULT_BYTES); // 2*8= 16 bit
 		ESP_LOGI(MAIN_TAG, "frameSize: %lu", frameSize);
 
-		adc_continuous_handle_cfg_t adcConfigHandler = {
-		    .conv_frame_size = frameSize,
-		    .max_store_buf_size = frameSize,
-		};
-		adc_continuous_handle_t adcHandler = NULL;
-		ESP_ERROR_CHECK(adc_continuous_new_handle(&adcConfigHandler, &adcHandler));
-		
-		adc_digi_pattern_config_t *adcPatterns = malloc(sizeof(adc_digi_pattern_config_t) * config.channels);
-		for (int i = 0; i<config.channels; i++) {
-			adcPatterns[i].atten = ADC_ATTEN_DB_12; //150 mV ~ 2450 mV
-			adcPatterns[i].channel = channelConfig[i];
-			adcPatterns[i].unit = ADC_UNIT_1;        ///< SAR ADC 1
-			adcPatterns[i].bit_width = ADC_BITWIDTH_12; //max selected by default
-		};
-
-		adc_continuous_config_t adcConfig = {
-			.pattern_num = config.channels,
-			.adc_pattern = adcPatterns,
-			.sample_freq_hz = config.sampleRate,
-			.format = ADC_DIGI_OUTPUT_FORMAT_TYPE1,
-			.conv_mode = ADC_CONV_SINGLE_UNIT_1
-		};
-		ESP_LOGI(MAIN_TAG, "buffers ready");
-		ESP_ERROR_CHECK(adc_continuous_config(adcHandler, &adcConfig));
-		old = adcHandler->adc_intr_func;
-		adcHandler->adc_intr_func = test;
-		adc_continuous_start(adcHandler);
-    adc_ll_digi_convert_limit_enable(false);
-
-		ESP_LOGI(MAIN_TAG, "adc running");
 		uint8_t *readbuffer = malloc(sizeof(uint8_t)*frameSize); //1448 is the max tcp data segment size
-		for (int i = 0; i < sizeof(readbuffer); i++) {
-			readbuffer[i] = -1;
-		}
 		uint32_t readData;
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
-			//ESP_ERROR_CHECK(adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30)); //+30 for dma latency 
 			adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30); //+30 for dma latency 
-			ESP_LOGI(MAIN_TAG, "dma count: %d", dmac);
-			uint32_t res1 = *(uint32_t*)SENS_SAR_MEAS_START1_REG;
-			uint32_t ctrl1 = *(uint32_t*)SENS_SAR_READ_CTRL_REG;
-			ESP_LOGI(MAIN_TAG, "res1 count: %lu", res1);
-			ESP_LOGI(MAIN_TAG, "ctrl1 count: %lu", ctrl1);
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);
