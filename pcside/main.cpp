@@ -16,6 +16,7 @@
 #include <fstream>
 #include <drawDevices.h>
 #include <vector>
+#include <drawGraph.h>
 
 int main(void) {
 	state *Mstate = new state;
@@ -84,6 +85,7 @@ int main(void) {
 				}*/
 			}
 		}
+		Texture2D graph;
 		if (!Mstate->recordstate.recorders.empty()){
 			auto front = Mstate->recordstate.recorders.front();
 			auto records = front[0]->getRecords();
@@ -99,12 +101,20 @@ int main(void) {
 			}
 			text += "sample rate: "  + std::to_string(lastdelta) + "\n";
 			GuiLabel((Rectangle){200, 0, 100,100}, text.data());
+std::vector<std::vector<samples::sample>> graphs;
+			graphs.push_back(records);
+			std::vector<int> offsets = {0};
+			graph = drawgraph(graphs, offsets, 600, 300, 3.3, 0, records.size() >600 ? records.size() -600: 0, records.size() >600 ? records.size(): 600);
+			DrawTexture(graph, 0, 100, YELLOW);
+
 
 		}else{
 		GuiLabel((Rectangle){200, 0, 100,100}, "asd");
 		};
 
+
 		EndDrawing();
+		UnloadTexture(graph);
 		printf("mainok\n");
 		fcount++;
 	};
@@ -121,3 +131,6 @@ int main(void) {
 	plot.close();
 	return 0;
 }
+
+//https://esp32.com/viewtopic.php?t=37016
+//idf uses worn hw registers
