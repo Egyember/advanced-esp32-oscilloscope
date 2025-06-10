@@ -100,7 +100,7 @@ int main(void) {
 				samplelast = recnow;
 			}
 			text += "sample rate: "  + std::to_string(lastdelta) + "\n";
-			GuiLabel((Rectangle){200, 0, 100,100}, text.data());
+			GuiLabel((Rectangle){200, 0, 200,100}, text.data());
 std::vector<std::vector<samples::sample>> graphs;
 			graphs.push_back(records);
 			std::vector<int> offsets = {0};

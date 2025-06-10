@@ -44,7 +44,6 @@
 #define WIFIFAILED BIT1
 #define COMPORT 40001
 
-//const static uint8_t channelConfig[] = {ADC_CHANNEL_0, ADC_CHANNEL_3,ADC_CHANNEL_4,ADC_CHANNEL_5};
 struct  scopeConf {
 	uint8_t channels;
 	uint32_t sampleRate; // expected ADC sampling frequency in Hz.
@@ -285,109 +284,42 @@ void app_main(void) {
 		uint32_t frameSize =
 		    (uint32_t)floor((float)config.sampleRate * ((float)config.duration / 1000.0) * (float)SOC_ADC_DIGI_RESULT_BYTES); // 2*8= 16 bit
 		ESP_LOGI(MAIN_TAG, "frameSize: %lu", frameSize);
-		/*
 
-		adc_continuous_handle_cfg_t adcConfigHandler = {
-		    .conv_frame_size = frameSize,
-		    .max_store_buf_size = frameSize,
+		i2s_config_t i2s_conf = {
+			.mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN,
+			.sample_rate = config.sampleRate,
+			.bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+			.channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
+			.communication_format = I2S_COMM_FORMAT_I2S_MSB,
+			.intr_alloc_flags = 0,
+			.dma_buf_count = 2,
+			.dma_buf_len = 1024,
+			.use_apll = false
 		};
-		adc_continuous_handle_t adcHandler = NULL;
-		ESP_ERROR_CHECK(adc_continuous_new_handle(&adcConfigHandler, &adcHandler));
-		
-		adc_digi_pattern_config_t *adcPatterns = malloc(sizeof(adc_digi_pattern_config_t) * config.channels);
-		for (int i = 0; i<config.channels; i++) {
-			adcPatterns[i].atten = ADC_ATTEN_DB_12; //150 mV ~ 2450 mV
-			adcPatterns[i].channel = channelConfig[i];
-			adcPatterns[i].unit = ADC_UNIT_1;        ///< SAR ADC 1
-			adcPatterns[i].bit_width = ADC_BITWIDTH_12; //max selected by default
-		};
+		ESP_ERROR_CHECK(i2s_driver_install(I2S_NUM_0, &i2s_conf, 0, NULL));
+		ESP_ERROR_CHECK(i2s_set_adc_mode(ADC_UNIT_1, ADC1_CHANNEL_0));
 
-		adc_continuous_config_t adcConfig = {
-			.pattern_num = config.channels,
-			.adc_pattern = adcPatterns,
-			.sample_freq_hz = config.sampleRate,
-			.format = ADC_DIGI_OUTPUT_FORMAT_TYPE1,
-			.conv_mode = ADC_CONV_SINGLE_UNIT_1
-		};
-		ESP_LOGI(MAIN_TAG, "buffers ready");
-		ESP_ERROR_CHECK(adc_continuous_config(adcHandler, &adcConfig));
-*/
-		//init i2s driver
-		
-		/* the new driver dosn't suport this use case... 
-		i2s_chan_handle_t rx_handle;
-		i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
-		// Allocate a new RX channel and get the handle of this channel 
-		i2s_new_channel(&chan_cfg, NULL, &rx_handle);
-		i2s_std_config_t std_cfg = {
-			.clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(config.sampleRate),
-			.slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
-			.gpio_cfg = {
-				.mclk = I2S_GPIO_UNUSED,
-				.bclk = GPIO_NUM_4,
-				.ws = GPIO_NUM_5,
-				.dout = I2S_GPIO_UNUSED,
-				.din = GPIO_NUM_19,
-				.invert_flags = {
-					.mclk_inv = false,
-					.bclk_inv = false,
-					.ws_inv = false,
-				},
-			},
-		};
-		i2s_channel_init_std_mode(rx_handle, &std_cfg);
-i2s_channel_enable(rx_handle);
-
-
-*/
-
- i2s_config_t i2s_conf = {
-    	.mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN,
-	    .sample_rate = 100000,
-	    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-	    .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
-	    .communication_format = I2S_COMM_FORMAT_I2S_MSB,
-	    .intr_alloc_flags = 0,
-	    .dma_buf_count = 2,
-	    .dma_buf_len = 1024,
-	    .use_apll = false
-    };
-    ESP_ERROR_CHECK(i2s_driver_install(I2S_NUM_0, &i2s_conf, 0, NULL));
-    ESP_ERROR_CHECK(i2s_set_adc_mode(ADC_UNIT_1, ADC1_CHANNEL_0));
-    ESP_ERROR_CHECK(i2s_adc_enable(I2S_NUM_0));
-
-    // delay for I2S bug workaround
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-
-    // ***IMPORTANT*** enable continuous adc sampling
-    SYSCON.saradc_ctrl2.meas_num_limit = 0;
-
-    /*
+		const static uint8_t channelConfig[] = {ADC_CHANNEL_0, ADC_CHANNEL_3,ADC_CHANNEL_4,ADC_CHANNEL_5};
     // ADC setting
     struct patternTableEntry *patterns = (struct patternTableEntry *)APB_CTRL_APB_SARADC_SAR1_PATT_TAB1_REG;
 		for (int i = 0; i<4; i++) {
 			patterns[i].atten = ADC_ATTEN_DB_12; //150 mV ~ 2450 mV
-			patterns[i].ch_sel = channelConfig[0];
+			patterns[i].ch_sel = channelConfig[i];
 			patterns[i].bit_width = 0b11;//ADC_BITWIDTH_12; //max selected by default
 		};
-    //SYSCON.saradc_sar1_patt_tab[0] = ((ADC1_CHANNEL_0 << 4) | (ADC_WIDTH_BIT_12 << 2) | ADC_ATTEN_DB_11) << 24;
-    SYSCON.saradc_ctrl.sar1_patt_len = 0;
-    // reduce sample time for 2Msps
-    SYSCON.saradc_ctrl.sar_clk_div = 2;
-    SYSCON.saradc_ctrl.data_to_i2s = 1;
-    SYSCON.saradc_ctrl.sar_sel = 0;
-    SYSCON.saradc_fsm.sample_cycle = 2;
+    SYSCON.saradc_ctrl.sar1_patt_len =  config.channels<4 ?config.channels -1 : 0;
+    if (config.channels>4){
+	    ESP_LOGE(MAIN_TAG, "channels more than 4 not implemented");
+    };
+		ESP_ERROR_CHECK(i2s_adc_enable(I2S_NUM_0));
 
-    // sampling rate 2Msps setting
-    I2S0.clkm_conf.clkm_div_num = 20;
-    I2S0.clkm_conf.clkm_div_b = 0;
-    I2S0.clkm_conf.clkm_div_a = 1;
-    I2S0.sample_rate_conf.rx_bck_div_num = 2;
-*/
+		// delay for I2S bug workaround
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 
-	//this needs to be done manulai
-//		adc_continuous_start(adcHandler);
- //   adc_ll_digi_convert_limit_enable(false);
+		// ***IMPORTANT*** enable continuous adc sampling
+		SYSCON.saradc_ctrl2.meas_num_limit = 0;
+
+
 		ESP_LOGI(MAIN_TAG, "adc running");
 		uint8_t *readbuffer = malloc(sizeof(uint8_t)*frameSize); //1448 is the max tcp data segment size
 		for (int i = 0; i < sizeof(readbuffer); i++) {
@@ -397,24 +329,15 @@ i2s_channel_enable(rx_handle);
 		size_t readData;
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
-			//ESP_ERROR_CHECK(adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30)); //+30 for dma latency 
-			//adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30); //+30 for dma latency 
 ESP_ERROR_CHECK(i2s_read(I2S_NUM_0, readbuffer, sizeof(uint8_t)*frameSize, &readData, portMAX_DELAY));
 			ESP_LOGI(MAIN_TAG, "read %d bytes", readData);
-	//		hexdump(readbuffer, readData, 32);
-	//		i2s_channel_read(rx_handle, readbuffer, sizeof(uint8_t)*frameSize, &readData, config.duration+30); //+30 for dma latency
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);
-	//	adc_continuous_stop(adcHandler);
 		close(fd);
+		ESP_ERROR_CHECK(i2s_adc_disable(I2S_NUM_0));
+		ESP_ERROR_CHECK(i2s_driver_uninstall(I2S_NUM_0));
 
-		/*
-		i2s_channel_disable(rx_handle);
-		i2s_del_channel(rx_handle);
-*/
-	//	ESP_ERROR_CHECK(adc_continuous_deinit(adcHandler));
-	//	free(adcPatterns);
 	};
 CLEANUPWITHSOC:
 	close(soc);
