@@ -6,11 +6,7 @@
 
 #include "esp_adc/../../adc_continuous_internal.h"
 
-#define ADC_LL_DEFAULT_CONV_LIMIT_NUM    255
 #include "hal/adc_ll.h"
-#define ADC_LL_DEFAULT_CONV_LIMIT_NUM    255
-
-#include "hal/adc_types.h"
 
 
 #include "esp_err.h"
@@ -38,7 +34,7 @@
 
 
 #include <soc/soc_caps.h>
-
+#include <driver/i2s.h>
 
 #define WIFIDONEBIT BIT0
 #define WIFIFAILED BIT1
@@ -163,15 +159,6 @@ int hexdump(unsigned char *src, size_t len, unsigned int with){
 	printf("\n");
 	return 0;
 };
-
-adc_dma_intr_func_t old;
-
-uint dmac = 0;
-
-bool IRAM_ATTR test(void *arg){
-	dmac +=1;
-	return old(arg);
-}
 
 void app_main(void) {
 	ESP_ERROR_CHECK(nvs_flash_init());
@@ -314,31 +301,81 @@ void app_main(void) {
 		};
 		ESP_LOGI(MAIN_TAG, "buffers ready");
 		ESP_ERROR_CHECK(adc_continuous_config(adcHandler, &adcConfig));
-		old = adcHandler->adc_intr_func;
-		adcHandler->adc_intr_func = test;
+
+		//init i2s driver
+		
+		/* the new driver dosn't suport this use case... 
+		i2s_chan_handle_t rx_handle;
+		i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+		// Allocate a new RX channel and get the handle of this channel 
+		i2s_new_channel(&chan_cfg, NULL, &rx_handle);
+		i2s_std_config_t std_cfg = {
+			.clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(config.sampleRate),
+			.slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
+			.gpio_cfg = {
+				.mclk = I2S_GPIO_UNUSED,
+				.bclk = GPIO_NUM_4,
+				.ws = GPIO_NUM_5,
+				.dout = I2S_GPIO_UNUSED,
+				.din = GPIO_NUM_19,
+				.invert_flags = {
+					.mclk_inv = false,
+					.bclk_inv = false,
+					.ws_inv = false,
+				},
+			},
+		};
+		i2s_channel_init_std_mode(rx_handle, &std_cfg);
+i2s_channel_enable(rx_handle);
+
+
+*/
+
+ i2s_config_t i2s_conf = {
+    	.mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN,
+	    .sample_rate = 1000000,
+	    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+	    .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
+	    .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+	    .intr_alloc_flags = 0,
+	    .dma_buf_count = 2,
+	    .dma_buf_len = 1024,
+	    .use_apll = false
+    };
+    ESP_ERROR_CHECK(i2s_driver_install(I2S_NUM_0, &i2s_conf, 0, NULL));
+    ESP_ERROR_CHECK(i2s_set_adc_mode(ADC_UNIT_1, ADC1_CHANNEL_0));
+    ESP_ERROR_CHECK(i2s_adc_enable(I2S_NUM_0));
+
+    // delay for I2S bug workaround
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+
+
+	//this needs to be done manulai
 		adc_continuous_start(adcHandler);
     adc_ll_digi_convert_limit_enable(false);
-
 		ESP_LOGI(MAIN_TAG, "adc running");
 		uint8_t *readbuffer = malloc(sizeof(uint8_t)*frameSize); //1448 is the max tcp data segment size
 		for (int i = 0; i < sizeof(readbuffer); i++) {
 			readbuffer[i] = -1;
 		}
-		uint32_t readData;
+		size_t readData;
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
 			//ESP_ERROR_CHECK(adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30)); //+30 for dma latency 
-			adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30); //+30 for dma latency 
-			ESP_LOGI(MAIN_TAG, "dma count: %d", dmac);
-			uint32_t res1 = *(uint32_t*)SENS_SAR_MEAS_START1_REG;
-			uint32_t ctrl1 = *(uint32_t*)SENS_SAR_READ_CTRL_REG;
-			ESP_LOGI(MAIN_TAG, "res1 count: %lu", res1);
-			ESP_LOGI(MAIN_TAG, "ctrl1 count: %lu", ctrl1);
+			//adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30); //+30 for dma latency 
+			i2s_read(I2S_NUM_0, readbuffer, sizeof(uint8_t)*frameSize, &readData, portMAX_DELAY);
+			ESP_LOGI(MAIN_TAG, "read %d bytes", readData);
+	//		i2s_channel_read(rx_handle, readbuffer, sizeof(uint8_t)*frameSize, &readData, config.duration+30); //+30 for dma latency
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);
 		adc_continuous_stop(adcHandler);
 		close(fd);
+
+		/*
+		i2s_channel_disable(rx_handle);
+		i2s_del_channel(rx_handle);
+*/
 		ESP_ERROR_CHECK(adc_continuous_deinit(adcHandler));
 		free(adcPatterns);
 	};
@@ -353,4 +390,5 @@ CLEANUP:
 	esp_netif_deinit();
 	esp_event_loop_delete_default();
 	nvs_flash_deinit();
-}
+
+};
