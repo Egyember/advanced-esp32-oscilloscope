@@ -34,7 +34,11 @@
 
 
 #include <soc/soc_caps.h>
+#include <soc/adc_periph.h>
+#include <soc/adc_channel.h>
+#include <hal/adc_ll.h>
 #include <driver/i2s.h>
+#include <soc/apb_ctrl_reg.h>
 
 #define WIFIDONEBIT BIT0
 #define WIFIFAILED BIT1
@@ -160,6 +164,11 @@ int hexdump(unsigned char *src, size_t len, unsigned int with){
 	return 0;
 };
 
+struct patternTableEntry{
+	uint8_t ch_sel: 4;
+	uint8_t bit_width: 2;
+	uint8_t atten: 2;
+};
 void app_main(void) {
 	ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -276,6 +285,7 @@ void app_main(void) {
 		uint32_t frameSize =
 		    (uint32_t)floor((float)config.sampleRate * ((float)config.duration / 1000.0) * (float)SOC_ADC_DIGI_RESULT_BYTES); // 2*8= 16 bit
 		ESP_LOGI(MAIN_TAG, "frameSize: %lu", frameSize);
+		/*
 
 		adc_continuous_handle_cfg_t adcConfigHandler = {
 		    .conv_frame_size = frameSize,
@@ -301,7 +311,7 @@ void app_main(void) {
 		};
 		ESP_LOGI(MAIN_TAG, "buffers ready");
 		ESP_ERROR_CHECK(adc_continuous_config(adcHandler, &adcConfig));
-
+*/
 		//init i2s driver
 		
 		/* the new driver dosn't suport this use case... 
@@ -349,35 +359,61 @@ i2s_channel_enable(rx_handle);
     // delay for I2S bug workaround
     vTaskDelay(10 / portTICK_PERIOD_MS);
 
+    // ***IMPORTANT*** enable continuous adc sampling
+    SYSCON.saradc_ctrl2.meas_num_limit = 0;
+
+    // ADC setting
+    struct patternTableEntry *patterns = (struct patternTableEntry *)APB_CTRL_APB_SARADC_SAR1_PATT_TAB1_REG;
+		for (int i = 0; i<4; i++) {
+			patterns[i].atten = ADC_ATTEN_DB_12; //150 mV ~ 2450 mV
+			patterns[i].ch_sel = channelConfig[0];
+			patterns[i].bit_width = 0b11;//ADC_BITWIDTH_12; //max selected by default
+		};
+    //SYSCON.saradc_sar1_patt_tab[0] = ((ADC1_CHANNEL_0 << 4) | (ADC_WIDTH_BIT_12 << 2) | ADC_ATTEN_DB_11) << 24;
+    SYSCON.saradc_ctrl.sar1_patt_len = 0;
+
+    // reduce sample time for 2Msps
+    SYSCON.saradc_ctrl.sar_clk_div = 2;
+    SYSCON.saradc_ctrl.data_to_i2s = 1;
+    SYSCON.saradc_ctrl.sar_sel = 0;
+    SYSCON.saradc_fsm.sample_cycle = 2;
+
+    // sampling rate 2Msps setting
+    I2S0.clkm_conf.clkm_div_num = 20;
+    I2S0.clkm_conf.clkm_div_b = 0;
+    I2S0.clkm_conf.clkm_div_a = 1;
+    I2S0.sample_rate_conf.rx_bck_div_num = 2;
 
 	//this needs to be done manulai
-		adc_continuous_start(adcHandler);
-    adc_ll_digi_convert_limit_enable(false);
+//		adc_continuous_start(adcHandler);
+ //   adc_ll_digi_convert_limit_enable(false);
 		ESP_LOGI(MAIN_TAG, "adc running");
 		uint8_t *readbuffer = malloc(sizeof(uint8_t)*frameSize); //1448 is the max tcp data segment size
 		for (int i = 0; i < sizeof(readbuffer); i++) {
 			readbuffer[i] = -1;
 		}
+		memset(readbuffer, 0xff, sizeof(uint8_t)*frameSize);
 		size_t readData;
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
 			//ESP_ERROR_CHECK(adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30)); //+30 for dma latency 
 			//adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30); //+30 for dma latency 
-			i2s_read(I2S_NUM_0, readbuffer, sizeof(uint8_t)*frameSize, &readData, portMAX_DELAY);
+ESP_ERROR_CHECK(i2s_read(I2S_NUM_0, readbuffer, sizeof(uint8_t)*frameSize, &readData, portMAX_DELAY));
 			ESP_LOGI(MAIN_TAG, "read %d bytes", readData);
+			hexdump(readbuffer, readData, 32);
 	//		i2s_channel_read(rx_handle, readbuffer, sizeof(uint8_t)*frameSize, &readData, config.duration+30); //+30 for dma latency
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);
-		adc_continuous_stop(adcHandler);
+	//	adc_continuous_stop(adcHandler);
 		close(fd);
 
 		/*
 		i2s_channel_disable(rx_handle);
 		i2s_del_channel(rx_handle);
 */
-		ESP_ERROR_CHECK(adc_continuous_deinit(adcHandler));
-		free(adcPatterns);
+	//	ESP_ERROR_CHECK(adc_continuous_deinit(adcHandler));
+	//	free(adcPatterns);
 	};
 CLEANUPWITHSOC:
 	close(soc);

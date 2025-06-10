@@ -18,6 +18,7 @@ Texture2D drawgraph(std::vector<std::vector<samples::sample>> data, std::vector<
 	}
 	
 	Texture2D texture = LoadTextureFromImage(image);
+	UnloadImage(image);
 	return texture;
 #endif
 };
