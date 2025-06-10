@@ -44,7 +44,7 @@
 #define WIFIFAILED BIT1
 #define COMPORT 40001
 
-const static uint8_t channelConfig[] = {ADC_CHANNEL_0, ADC_CHANNEL_3,ADC_CHANNEL_4,ADC_CHANNEL_5};
+//const static uint8_t channelConfig[] = {ADC_CHANNEL_0, ADC_CHANNEL_3,ADC_CHANNEL_4,ADC_CHANNEL_5};
 struct  scopeConf {
 	uint8_t channels;
 	uint32_t sampleRate; // expected ADC sampling frequency in Hz.
@@ -343,7 +343,7 @@ i2s_channel_enable(rx_handle);
 
  i2s_config_t i2s_conf = {
     	.mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN,
-	    .sample_rate = 1000000,
+	    .sample_rate = 100000,
 	    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
 	    .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
 	    .communication_format = I2S_COMM_FORMAT_I2S_MSB,
@@ -362,6 +362,7 @@ i2s_channel_enable(rx_handle);
     // ***IMPORTANT*** enable continuous adc sampling
     SYSCON.saradc_ctrl2.meas_num_limit = 0;
 
+    /*
     // ADC setting
     struct patternTableEntry *patterns = (struct patternTableEntry *)APB_CTRL_APB_SARADC_SAR1_PATT_TAB1_REG;
 		for (int i = 0; i<4; i++) {
@@ -371,7 +372,6 @@ i2s_channel_enable(rx_handle);
 		};
     //SYSCON.saradc_sar1_patt_tab[0] = ((ADC1_CHANNEL_0 << 4) | (ADC_WIDTH_BIT_12 << 2) | ADC_ATTEN_DB_11) << 24;
     SYSCON.saradc_ctrl.sar1_patt_len = 0;
-
     // reduce sample time for 2Msps
     SYSCON.saradc_ctrl.sar_clk_div = 2;
     SYSCON.saradc_ctrl.data_to_i2s = 1;
@@ -383,6 +383,7 @@ i2s_channel_enable(rx_handle);
     I2S0.clkm_conf.clkm_div_b = 0;
     I2S0.clkm_conf.clkm_div_a = 1;
     I2S0.sample_rate_conf.rx_bck_div_num = 2;
+*/
 
 	//this needs to be done manulai
 //		adc_continuous_start(adcHandler);
@@ -400,7 +401,7 @@ i2s_channel_enable(rx_handle);
 			//adc_continuous_read(adcHandler, readbuffer, sizeof(readbuffer), &readData, config.duration+30); //+30 for dma latency 
 ESP_ERROR_CHECK(i2s_read(I2S_NUM_0, readbuffer, sizeof(uint8_t)*frameSize, &readData, portMAX_DELAY));
 			ESP_LOGI(MAIN_TAG, "read %d bytes", readData);
-			hexdump(readbuffer, readData, 32);
+	//		hexdump(readbuffer, readData, 32);
 	//		i2s_channel_read(rx_handle, readbuffer, sizeof(uint8_t)*frameSize, &readData, config.duration+30); //+30 for dma latency
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
