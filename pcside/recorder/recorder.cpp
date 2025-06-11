@@ -1,10 +1,14 @@
 #include "devices.h"
+#include <cstdio>
+#include <ctime>
 #include <pthread.h>
 #include <recorder.h>
 #include <ringbuffer.h>
 #include <samples.h>
 #include <unistd.h>
 #include <vector>
+#include <chrono>
+#include <unistd.h>
 
 #define READBUFFERSIZE 128
 
@@ -48,7 +52,8 @@ nevertriger::nevertriger() {};
 nevertriger::~nevertriger() { return; };
 
 recorder::recorder(triger *startTriger, triger *stopTriger, ringbuffers::ringbuffer *samplestream,
-		   std::atomic<enum states> *state, size_t buffsize) {
+		   std::atomic<enum states> *state, size_t buffsize, unsigned int freqarg) {
+	freq = freqarg;
 	startTrig = startTriger;
 	stopTrig = stopTriger;
 	samplest = samplestream;
@@ -69,8 +74,11 @@ void recorder::executor(recorder *thispointer) {
 	uint16_t readbuff[READBUFFERSIZE] = {0};
 	size_t read = 0;
 	while(true) {
+		std::chrono::microseconds start = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		read = thispointer->samplest->readBuffer((unsigned char *)readbuff, READBUFFERSIZE*sizeof(uint16_t));
+		unsigned long int period = (1000000/ thispointer->freq);
+		period *= read == 0? 10 : read;
 		if(read != 0) {
 			for (int i = 0; i < read/sizeof(uint16_t); i++) {
 				auto samp = devices::parseSample(readbuff[i]);
@@ -88,11 +96,16 @@ void recorder::executor(recorder *thispointer) {
 				}
 
 			}
-		} else {
-			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-			usleep(50);
 		}
+		std::chrono::microseconds end = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+		std::chrono::microseconds delta = end - start;
+		delta = (std::chrono::microseconds) period - delta;
+		if (delta.count() > 0) {
+			usleep(delta.count() / 1000);
+		}else if (delta.count() != 0) {
+			printf("behind %lu µs\n", delta.count());
+		}
 	}
 };
 
@@ -103,6 +116,20 @@ std::vector<samples::sample> recorder::getRecords() {
 	return ret;
 };
 
+std::vector<samples::sample> recorder::getRecords(unsigned int start,unsigned int stop) {
+	this->buffer.rdlock();
+	std::vector<samples::sample> ret(this->buffer._data.begin()+start, this->buffer._data.begin()+stop);
+	this->buffer.unlock();
+	return ret;
+};
+
+int recorder::buffersize(){
+	this->buffer.rdlock();
+	auto ret = this->buffer._data.size();
+	this->buffer.unlock();
+	return ret;
+
+}
 void recorder::clear() {
 	this->buffer.wrlock();
 	this->buffer._data.clear();

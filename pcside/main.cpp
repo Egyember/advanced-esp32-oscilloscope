@@ -19,6 +19,7 @@
 #include <drawGraph.h>
 
 int main(void) {
+	SetTraceLogLevel(LOG_ERROR); 
 	state *Mstate = new state;
 	Mstate->devices = new helper::thwraper<std::list<devices::device *>>();
 	InitWindow(0, 0, "teszt");
@@ -52,7 +53,7 @@ int main(void) {
 				if(GuiButton((Rectangle){0, 0, 100, 100}, "connect")) {
 					struct esp::scopeConf conf = {
 					    .channels = 1,
-					    .sampleRate = 40000,
+					    .sampleRate = 100000,
 					    .duration = 80,
 					};
 					devices::device *dev =
@@ -63,7 +64,7 @@ int main(void) {
 					Mstate->devices->unlock();
 					Mstate->devices->rdlock();
 					for (int i = 0; i < conf.channels; i++) {
-						record::recorder* rec = new record::recorder(new record::edgetriger(1.0, record::RISEING), new record::edgetriger(1.0, record::FALEING), Mstate->devices->_data.back()->buffer[i] ,&Mstate->recordstate.state, (size_t)3200);
+						record::recorder* rec = new record::recorder(new record::edgetriger(1.0, record::RISEING), new record::edgetriger(1.0, record::FALEING), Mstate->devices->_data.back()->buffer[i] ,&Mstate->recordstate.state, (size_t)3200, 100000);
 						std::vector<record::recorder*> vec = {rec};
 						Mstate->recordstate.recorders.push_back(vec);
 					}
@@ -72,16 +73,17 @@ int main(void) {
 				};
 			}
 		}
-		Texture2D graph;
 		if (!Mstate->recordstate.recorders.empty()){
+		Texture2D graph;
 			auto front = Mstate->recordstate.recorders.front();
-			auto records = front[0]->getRecords();
+			auto recordlen = front[0]->buffersize();
+			auto records = front[0]->getRecords(recordlen - 600 >0 ? recordlen - 600: 0, recordlen);
 			std::string text = "";
-			text += "recorded: " + std::to_string(records.size()) + "\n";
-			text += "last value: "  + std::to_string( ((records.size() != 0)? records.back().voltage : -1.0)) + "\n";
+			text += "recorded: " + std::to_string(recordlen) + "\n";
+			text += "last value: "  + std::to_string( ((recordlen != 0)? records.back().voltage : -1.0)) + "\n";
 			if (fcount >= RefreshRate) {
 				fcount = 0;
-				auto recnow = records.size();
+				auto recnow = recordlen;
 				lastdelta = recnow - samplelast;
 				samplelast = recnow;
 			}
@@ -97,11 +99,11 @@ int main(void) {
 		}else{
 		GuiLabel((Rectangle){200, 0, 100,100}, "asd");
 		};
+		GuiLabel((Rectangle){400, 0, 100,100}, std::to_string(GetFPS()).data());
 
 
 		EndDrawing();
 		UnloadTexture(graph);
-		printf("mainok\n");
 		fcount++;
 	};
 	CloseWindow(); // Close window and OpenGL context

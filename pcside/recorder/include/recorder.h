@@ -2,9 +2,9 @@
 #define RECOREDER
 #include <atomic>
 #include <list>
+#include <ringbuffer.h>
 #include <samples.h>
 #include <vector>
-#include <ringbuffer.h>
 namespace record {
 enum states { RECORED, STOP };
 
@@ -42,7 +42,7 @@ class recorder {
 	std::atomic<enum states> *recstate;
 	pthread_t thId;
 	helper::thwraper<std::vector<samples::sample>> buffer;
-
+	unsigned int freq;
 	static void executor(recorder *thispointer);
 
       public:
@@ -50,9 +50,11 @@ class recorder {
 	 * this function takes ownship of the two trigers
 	 */
 	recorder(triger *startTriger, triger *stopTriger, ringbuffers::ringbuffer *samplestream,
-		 std::atomic<enum states> *state, size_t buffsize);
+		 std::atomic<enum states> *state, size_t buffsize, unsigned int freq = 40000);
 	~recorder();
 	std::vector<samples::sample> getRecords();
+	std::vector<samples::sample> getRecords(unsigned int start, unsigned int stop);
+	int buffersize();
 	void clear();
 };
 
