@@ -32,11 +32,6 @@ int main(void) {
 	       monitorCount);
 	bool drawdev = false;
 	bool connected = false;
-	/*
-	std::vector<samples::sampleStream *> *sbuff = new std::vector<samples::sampleStream *>;
-	samples::sampleStream *sstream = new samples::sampleStream;
-	sbuff->push_back(sstream);
-*/
 	int samplelast = 0;
 	int lastdelta = 0;
 	int fcount = 0;
@@ -75,14 +70,6 @@ int main(void) {
 					Mstate->devices->unlock();
 					connected = true;
 				};
-			} else {
-			//	Mstate->devices->rdlock();
-			//	devices::device * dev= Mstate->devices->_data.front();
-			//	dev->readSamples(sbuff);
-			//	Mstate->devices->unlock();
-	/*			while(!sstream->empty()) {
-					sstream->pop();
-				}*/
 			}
 		}
 		Texture2D graph;
@@ -92,7 +79,6 @@ int main(void) {
 			std::string text = "";
 			text += "recorded: " + std::to_string(records.size()) + "\n";
 			text += "last value: "  + std::to_string( ((records.size() != 0)? records.back().voltage : -1.0)) + "\n";
-			//text += "queue size: "  + std::to_string( sstream->_data.size()) + "\n";
 			if (fcount >= RefreshRate) {
 				fcount = 0;
 				auto recnow = records.size();
@@ -101,7 +87,7 @@ int main(void) {
 			}
 			text += "sample rate: "  + std::to_string(lastdelta) + "\n";
 			GuiLabel((Rectangle){200, 0, 200,100}, text.data());
-std::vector<std::vector<samples::sample>> graphs;
+			std::vector<std::vector<samples::sample>> graphs;
 			graphs.push_back(records);
 			std::vector<int> offsets = {0};
 			graph = drawgraph(graphs, offsets, 600, 300, 3.3, 0, records.size() >600 ? records.size() -600: 0, records.size() >600 ? records.size(): 600);
@@ -131,6 +117,3 @@ std::vector<std::vector<samples::sample>> graphs;
 	plot.close();
 	return 0;
 }
-
-//https://esp32.com/viewtopic.php?t=37016
-//idf uses worn hw registers

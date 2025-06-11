@@ -14,6 +14,5 @@ namespace samples{
 		sample(float volt, uint16_t chan);
 		sample();
 	};
-	typedef helper::thwraper<std::deque<sample>> sampleStream;
 }
 #endif
