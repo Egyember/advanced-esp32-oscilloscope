@@ -222,33 +222,3 @@ samples::sample devices::parseSample(uint16_t raw){
 #endif
 	return samples::sample(volt, chan);
 };
-int devices::device::readSamples(std::vector<samples::sampleStream *> *out) {
-	assert(out != nullptr);
-	assert(out->size() == this->buffer.size());
-	if(out->size() == 0){
-		exit(69);
-	
-	};
-	ringbuffers::ringbuffer *cbuff = NULL;
-	for (unsigned int i=0; i<this->buffer.size(); i++) {
-		(*out)[i]->wrlock();
-		cbuff = this->buffer[i];
-		unsigned char buff[esp::SOC_ADC_DIGI_RESULT_BYTES*128] = {0};
-		unsigned int r;
-		do {
-			r = cbuff->readBuffer(buff, sizeof(buff));
-#ifdef DEBUGSAMPLE
-			std::cout << "read " << r << " bytes from rb\n";
-#endif
-			for (unsigned long int j = 0; j< sizeof(buff) && j <r; j+=esp::SOC_ADC_DIGI_RESULT_BYTES) {
-				uint16_t samp = *((uint16_t*)&buff[j]);
-				(*out)[i]->_data.push_back(parseSample(samp));
-			}
-		}while (r==0);
-#ifdef DEBUGSAMPLE
-		std::cout << "out of samples\n";
-#endif
-		(*out)[i]->unlock();
-	}
-	return 0;
-};

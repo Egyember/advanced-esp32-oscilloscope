@@ -40,12 +40,6 @@ class device {
 			       socklen_t address_len);
 		~device();
 		//int devices_disconnect();
-
-
-		/**
-		 * the number of streams shal be equal to the number of channels specified in config
-		 **/
-		int readSamples(std::vector<samples::sampleStream *> *out);
 };
 
 samples::sample parseSample(uint16_t raw);
