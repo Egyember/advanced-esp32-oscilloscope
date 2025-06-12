@@ -143,11 +143,14 @@ void *root::scanForEsp(root *root) {
 	while(true) {
 		struct sockaddr addr;
 		socklen_t addrlen = sizeof(addr);
-		int aread = recvfrom(soc, &buffer, sizeof(buffer), 0, &addr, &addrlen);
+		int aread = recvfrom(soc, &buffer, root->search.length(), 0, &addr, &addrlen);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 #ifdef NDEBUG
 
-	std::cout << "got something\n";
+	std::cout << "got something " << aread << " long whanted " << sizeof(buffer) << " long" <<"\n";
+	char rec[root->search.length()+1];
+	sprintf(rec, "%s\n", buffer);
+	std::cout << rec;
 
 #endif
 		if(aread < 0) {
@@ -174,6 +177,11 @@ root::root(std::string search) {
 	this->search = search;
 	void *(*fpointer)(void*)= (void* (*)(void*))&scanForEsp;
 	pthread_create(&scanner, NULL, fpointer, this);
+#ifdef NDEBUG
+
+	std::cout << "inicalized with: " << search << "\n";
+
+#endif
 };
 
 root::~root(){

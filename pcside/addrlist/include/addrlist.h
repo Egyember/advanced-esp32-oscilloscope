@@ -24,7 +24,7 @@ class root {
       public:
 	helper::thwraper<std::list<addrlist::addrllnode>> nodes;
 	
-	root(std::string search="");
+	root(std::string search="oscilloscope here");
 	~root();
 	int update(struct sockaddr addr);
 	void deletOld();
