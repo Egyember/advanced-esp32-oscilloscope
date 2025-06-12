@@ -166,35 +166,6 @@ devices::device::device(struct esp::scopeConf config, addrlist::root *root, stru
 	return;
 };
 
-/*
-int devices_append(struct device *to, struct device *dev) {
-	assert(to);
-	assert(dev);
-	struct device *last = NULL;
-	{
-		pthread_rwlock_rdlock(&to->lock);
-		struct device *next = to->next;
-		pthread_rwlock_unlock(&to->lock);
-		while(1) {
-			pthread_rwlock_rdlock(&next->lock);
-			if(next->next == NULL) {
-				pthread_rwlock_unlock(&next->lock);
-				pthread_rwlock_wrlock(&next->lock);
-				last = next;
-				break;
-			}else{
-				struct device *nextnext = next->next;
-				pthread_rwlock_unlock(&next->lock);
-				next = nextnext;
-			}
-		}
-	}
-	last->next = dev;
-	dev->prev = last;
-	pthread_rwlock_unlock(&last->lock);
-	return 0;
-};
-*/
 
 devices::device::~device() {
 	// int devices_disconnect(struct device *dev){

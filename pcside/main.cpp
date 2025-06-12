@@ -56,8 +56,11 @@ int main(void) {
 					    .sampleRate = 100000,
 					    .duration = 80,
 					};
+					Mstate->addrRoot.nodes.wrlock();
+					auto addr= Mstate->addrRoot.nodes._data.front().addr;
+					Mstate->addrRoot.nodes.unlock();
 					devices::device *dev =
-					    new devices::device(conf, &Mstate->addrRoot, &Mstate->addrRoot.next->addr,
+						new devices::device(conf, &Mstate->addrRoot, &addr,
 								sizeof(struct sockaddr_in));
 					Mstate->devices->wrlock();
 					Mstate->devices->_data.push_back(dev);
@@ -73,8 +76,8 @@ int main(void) {
 				};
 			}
 		}
-		if (!Mstate->recordstate.recorders.empty()){
 		Texture2D graph;
+		if (!Mstate->recordstate.recorders.empty()){
 			auto front = Mstate->recordstate.recorders.front();
 			auto recordlen = front[0]->buffersize();
 			auto records = front[0]->getRecords(recordlen - 600 >0 ? recordlen - 600: 0, recordlen);

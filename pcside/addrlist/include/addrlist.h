@@ -4,35 +4,33 @@
 #include <pthread.h>
 #include <string>
 #include <sys/socket.h>
+#include <helpertypes.h>
 namespace addrlist {
 
 struct addrllnode {
 	struct sockaddr addr;
 	time_t lastseen;
 	bool conneted;
-	struct addrllnode *next;
-	struct addrllnode *prev;
 	addrllnode();
 	addrllnode(struct sockaddr addr);
+inline bool operator==(const addrllnode& lhs);
 };
 class root {
       private:
-	pthread_rwlock_t lock;
 	std::string search;
 	pthread_t scanner;
+	static void *scanForEsp(root *root);
 
       public:
-	//temporaly fix
-	struct addrllnode *next;
+	helper::thwraper<std::list<addrlist::addrllnode>> nodes;
 	
-	root();
+	root(std::string search="");
 	~root();
 	int update(struct sockaddr addr);
-	int deletOld();
+	void deletOld();
 	int connect(struct sockaddr *taddress);
 	int disconnect(struct sockaddr *taddress);
 	int lenth();
-	static void *scanForEsp(root *root);
 };
 
 }; // namespace addrlist
