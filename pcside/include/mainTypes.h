@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <helpertypes.h>
 #include <recorder.h>
+#include <raylib.h>
 
 
 class state {
@@ -16,7 +17,7 @@ class state {
 	addrlist::root addrRoot;
 	helper::thwraper<std::list<devices::device *>> *devices;
 	record::recorederstate recordstate;
-	
+	bool addDialog = false;
 };
 
 #endif
