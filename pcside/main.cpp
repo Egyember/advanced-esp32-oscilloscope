@@ -52,7 +52,7 @@ int main(void) {
 		Rectangle popupContent = popupScroll;
 		popupContent.width -= 2 * GuiGetStyle(DEFAULT, BORDER_WIDTH);
 		popupContent.width -= 15;
-		popupContent.height += 200;
+		popupContent.height += Mstate->addrRoot.lenth() * (GuiGetStyle(DEFAULT, TEXT_SIZE)+GuiGetStyle(DEFAULT, TEXT_SPACING)*2);
 
 		float deviderpoint[2] = {(float)width * 0.9f, (float)height * (float)0.1};
 		Rectangle buttons = {deviderpoint[0], 0, (float)width - deviderpoint[0], deviderpoint[1]};
