@@ -1,4 +1,5 @@
 #include "devices.h"
+#include "espsiteTypes.h"
 #include "helpertypes.h"
 #include <addrlist.h>
 #include <cstring>
@@ -99,6 +100,28 @@ int main(void) {
 		}
 		if (setupDialog) {
 			setupDialog = !GuiWindowBox(popupBounds, "setup");
+			static esp::scopeConf conf;
+			static char chan[32];
+			static char samp[32];
+			static char duration[32];
+			static bool chanEdit;
+			static bool sampEdit;
+			static bool duraEdit;
+			Rectangle chanBound = popupScroll;
+			chanBound.height /= 4;
+			Rectangle sampBound = chanBound;
+			sampBound.y += chanBound.height;
+			Rectangle duraBound = sampBound;
+			duraBound.y += chanBound.height;
+			if(GuiTextBox(chanBound, chan, 32, chanEdit)){
+				chanEdit = !chanEdit;
+			};
+			if(GuiTextBox(sampBound, samp, 32, sampEdit)){
+				sampEdit = !sampEdit
+			};
+			if(GuiTextBox(duraBound, duration, 32, duraEdit)){
+				duraEdit = !duraEdit;
+			};
 		
 		}
 		GuiButton(saveButton, "#2#");
