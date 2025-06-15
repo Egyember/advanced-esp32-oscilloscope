@@ -1,10 +1,12 @@
 #include "devices.h"
 #include "helpertypes.h"
 #include <addrlist.h>
+#include <cstring>
 #include <drawDevices.h>
 #include <drawGraph.h>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <list>
 #include <mainTypes.h>
 #include <netinet/in.h>
@@ -17,6 +19,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
+#include <arpa/inet.h>
 
 int main(void) {
 	SetTraceLogLevel(LOG_ERROR);
@@ -37,8 +40,12 @@ int main(void) {
 	int lastdelta = 0;
 	int fcount = 0;
 
-	Rectangle bounds = {0};
-	Vector2 scroll = {0};
+	bool addDialog = false;
+	int addIndex = -1;
+	int addActive = -1;
+	struct sockaddr selectedAddress = {0};
+	bool setupDialog = false;
+
 	while(!WindowShouldClose()) { // Detect window close button or ESC key
 		BeginDrawing();
 		ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
@@ -49,10 +56,6 @@ int main(void) {
 		Rectangle popupScroll = popupBounds;
 		popupScroll.y += 23;
 		popupScroll.height -= 23;
-		Rectangle popupContent = popupScroll;
-		popupContent.width -= 2 * GuiGetStyle(DEFAULT, BORDER_WIDTH);
-		popupContent.width -= 15;
-		popupContent.height += Mstate->addrRoot.lenth() * (GuiGetStyle(DEFAULT, TEXT_SIZE)+GuiGetStyle(DEFAULT, TEXT_SPACING)*2);
 
 		float deviderpoint[2] = {(float)width * 0.9f, (float)height * (float)0.1};
 		Rectangle buttons = {deviderpoint[0], 0, (float)width - deviderpoint[0], deviderpoint[1]};
@@ -69,16 +72,34 @@ int main(void) {
 
 		// add dialog button
 		if(GuiButton(addButton, "+")) {
-			Mstate->addDialog = true;
+			addDialog = true;
+			addActive = -1;
+			addIndex = -1;
 		};
-		if(Mstate->addDialog) {
-			Mstate->addDialog = !GuiWindowBox(popupBounds, "add");
-			GuiScrollPanel(popupScroll, NULL, popupContent, &scroll, &bounds);
-			printf("x: %d, y: %d, w: %d, h: %d\n", (int)bounds.x,  (int)bounds.y,  (int)bounds.width,  (int)bounds.height );
-			BeginScissorMode(bounds.x, bounds.y, bounds.width, bounds.height);
-				GuiGrid((Rectangle){popupScroll.x + scroll.x, popupScroll.y + scroll.y, popupContent.width,popupContent.height}, NULL, 16, 3, NULL);
-				DrawRectangle(0, 0, width, height, YELLOW);
-			EndScissorMode();
+		if(addDialog) {
+			addDialog = !GuiWindowBox(popupBounds, "add");
+			std::string addressed = "";
+			Mstate->addrRoot.nodes.rdlock();
+			for (auto n : Mstate->addrRoot.nodes._data) {
+				char buff[16] = {0};
+				inet_ntop(AF_INET, &((struct sockaddr_in *) &n.addr)->sin_addr, buff, sizeof(buff));
+				addressed += buff;
+				addressed += ";";
+			}
+			addressed = addressed.substr(0, addressed.size()-1);
+			GuiListView(popupScroll, addressed.c_str(), &addIndex, &addActive);
+			if (addActive != -1) {
+				std::list<addrlist::addrllnode>::iterator it = Mstate->addrRoot.nodes._data.begin();
+				std::advance(it, addActive);
+				memcpy(&selectedAddress, &it->addr, sizeof(selectedAddress));
+				setupDialog = true;
+				addDialog = false;
+			}
+			Mstate->addrRoot.nodes.unlock();
+		}
+		if (setupDialog) {
+			setupDialog = !GuiWindowBox(popupBounds, "setup");
+		
 		}
 		GuiButton(saveButton, "#2#");
 		if(Mstate->recordstate.state == record::RECORED) {

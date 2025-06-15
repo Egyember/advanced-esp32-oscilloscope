@@ -17,7 +17,6 @@ class state {
 	addrlist::root addrRoot;
 	helper::thwraper<std::list<devices::device *>> *devices;
 	record::recorederstate recordstate;
-	bool addDialog = false;
 };
 
 #endif
