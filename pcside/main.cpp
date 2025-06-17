@@ -2,6 +2,7 @@
 #include "espsiteTypes.h"
 #include "helpertypes.h"
 #include <addrlist.h>
+#include <cstdlib>
 #include <cstring>
 #include <drawDevices.h>
 #include <drawGraph.h>
@@ -100,9 +101,9 @@ int main(void) {
 		}
 		if (setupDialog) {
 			setupDialog = !GuiWindowBox(popupBounds, "setup");
-			static char chan[32];
-			static char samp[32];
-			static char duration[32];
+			static char chan[33]; //0 inicialized becouse static, +1 for null byte
+			static char samp[33];
+			static char duration[33];
 			static bool chanEdit;
 			static bool sampEdit;
 			static bool duraEdit;
@@ -148,16 +149,83 @@ int main(void) {
 
 			if (GuiButton(sendBound, "send")){
 				std::string error = "";
-				static esp::scopeConf conf;
-				 
+				esp::scopeConf conf;
+				unsigned int chanParsed = -1;	 
+				unsigned int sampParsed = -1;	 
+				unsigned int duraParsed = -1;	 
+				std::vector<record::recorder *> vec;
+				if(sscanf(chan, "%ud",&chanParsed) != 1){
+					error = "invalid\n";
+					goto error;
+				}; 
+				if (!(chanParsed > 0 && UINT8_MAX >= chanParsed)) {
+					error = "invalid\n";
+					goto error;
+				}
+				conf.channels = (uint8_t) chanParsed;
+				if(sscanf(samp, "%ud",&sampParsed) != 1){
+					error = "invalid\n";
+					goto error;
+				}; 
+				if (!(sampParsed > 0 && UINT32_MAX >= sampParsed)) {
+					error = "invalid\n";
+					goto error;
+				}
+				conf.sampleRate = (uint32_t) sampParsed;
+				if(sscanf(duration, "%ud",&duraParsed) != 1){
+					error = "invalid\n";
+					goto error;
+				}; 
+				if (!(duraParsed > 0 && UINT32_MAX >= duraParsed)) {
+					error = "invalid\n";
+					goto error;
+				}
+				conf.sampleRate = (uint32_t) duraParsed;
+
+				devices::device *dev;
+				try{
+				dev = new devices::device(conf, &Mstate->addrRoot, &selectedAddress,
+							sizeof(struct sockaddr_in));
+				}
+				catch (...){
+					error = "constructor";
+					goto error;
+				};
+				Mstate->devices->wrlock();
+				Mstate->devices->_data.push_back(dev);
+				Mstate->devices->unlock();
+
+				Mstate->devices->rdlock();
+				for(int i = 0; i < conf.channels; i++) {
+					record::recorder *rec = new record::recorder(
+							new record::edgetriger(1.0, record::RISEING),
+							new record::edgetriger(1.0, record::FALEING),
+							Mstate->devices->_data.back()->buffer[i],
+							&Mstate->recordstate.state, (size_t)3200, 100000);
+					vec.push_back(rec);
+				}
+				Mstate->recordstate.recorders.push_back(vec);
+				Mstate->devices->unlock();
+
+error:
+				setupDialog = false;
+				if (error != "") {
+					printf("error: %s\n", error.c_str());
+				}
+#warning remove this after after testing
+				connected = true;
 			};
-		
+
 		}
 		GuiButton(saveButton, "#2#");
 		if(Mstate->recordstate.state == record::RECORED) {
-			GuiButton(recordButton, "#132#");
+			if (GuiButton(recordButton, "#132#")) {
+				Mstate->recordstate.state = record::STOP;
+			};
 		} else {
-			GuiButton(recordButton, "#131#");
+			if (GuiButton(recordButton, "#131#")){
+				Mstate->recordstate.state = record::RECORED;
+			};
 		}
 		int len = Mstate->addrRoot.lenth();
 		char status[128] = {0};
