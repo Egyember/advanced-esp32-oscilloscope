@@ -100,7 +100,6 @@ int main(void) {
 		}
 		if (setupDialog) {
 			setupDialog = !GuiWindowBox(popupBounds, "setup");
-			static esp::scopeConf conf;
 			static char chan[32];
 			static char samp[32];
 			static char duration[32];
@@ -109,18 +108,48 @@ int main(void) {
 			static bool duraEdit;
 			Rectangle chanBound = popupScroll;
 			chanBound.height /= 4;
+
+			Rectangle chanText = chanBound;
+			chanText.width /=2; 
+			Rectangle chanInput = chanText;
+			chanInput.x += chanText.width;
+
 			Rectangle sampBound = chanBound;
 			sampBound.y += chanBound.height;
+
+			Rectangle sampText = sampBound;
+			sampText.width /=2; 
+			Rectangle sampInput = sampText;
+			sampInput.x += chanText.width;
+
 			Rectangle duraBound = sampBound;
 			duraBound.y += chanBound.height;
-			if(GuiTextBox(chanBound, chan, 32, chanEdit)){
+
+			Rectangle duraText = duraBound;
+			duraText.width /=2; 
+			Rectangle duraInput = duraText;
+			duraInput.x += duraText.width;
+
+			GuiLabel(chanText, " number of channels:");
+			if(GuiTextBox(chanInput, chan, 32, chanEdit)){
 				chanEdit = !chanEdit;
 			};
-			if(GuiTextBox(sampBound, samp, 32, sampEdit)){
-				sampEdit = !sampEdit
+			GuiLabel(sampText, " sample rate:");
+			if(GuiTextBox(sampInput, samp, 32, sampEdit)){
+				sampEdit = !sampEdit;
 			};
-			if(GuiTextBox(duraBound, duration, 32, duraEdit)){
+			GuiLabel(duraText, " duration:");
+			if(GuiTextBox(duraInput, duration, 32, duraEdit)){
 				duraEdit = !duraEdit;
+			};
+
+			Rectangle sendBound = duraBound;
+			sendBound.y += sendBound.height;
+
+			if (GuiButton(sendBound, "send")){
+				std::string error = "";
+				static esp::scopeConf conf;
+				 
 			};
 		
 		}
