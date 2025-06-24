@@ -42,11 +42,6 @@ int main(void) {
 	int lastdelta = 0;
 	int fcount = 0;
 
-	bool addDialog = false;
-	int addIndex = -1;
-	int addActive = -1;
-	struct sockaddr selectedAddress = {0};
-	bool setupDialog = false;
 
 	while(!WindowShouldClose()) { // Detect window close button or ESC key
 		BeginDrawing();
@@ -74,12 +69,12 @@ int main(void) {
 
 		// add dialog button
 		if(GuiButton(addButton, "+")) {
-			addDialog = true;
-			addActive = -1;
-			addIndex = -1;
+			Mstate->gui.add.addDialog = true;
+			Mstate->gui.add.addActive = -1;
+			Mstate->gui.add.addIndex = -1;
 		};
-		if(addDialog) {
-			addDialog = !GuiWindowBox(popupBounds, "add");
+		if(Mstate->gui.add.addDialog) {
+			Mstate->gui.add.addDialog = !GuiWindowBox(popupBounds, "add");
 			std::string addressed = "";
 			Mstate->addrRoot.nodes.rdlock();
 			for (auto n : Mstate->addrRoot.nodes._data) {
@@ -89,24 +84,18 @@ int main(void) {
 				addressed += ";";
 			}
 			addressed = addressed.substr(0, addressed.size()-1);
-			GuiListView(popupScroll, addressed.c_str(), &addIndex, &addActive);
+			GuiListView(popupScroll, addressed.c_str(), &Mstate->gui.add.addIndex, &Mstate->gui.add.addActive);
 			if (addActive != -1) {
 				std::list<addrlist::addrllnode>::iterator it = Mstate->addrRoot.nodes._data.begin();
-				std::advance(it, addActive);
-				memcpy(&selectedAddress, &it->addr, sizeof(selectedAddress));
-				setupDialog = true;
-				addDialog = false;
+				std::advance(it, Mstate->gui.add.addActive);
+				memcpy(&Mstate->gui.add.selectedAddress, &it->addr, sizeof(Mstate->gui.add.selectedAddress));
+				Mstate->gui.add.setupDialog = true;
+				Mstate->gui.add.addDialog = false;
 			}
 			Mstate->addrRoot.nodes.unlock();
 		}
-		if (setupDialog) {
-			setupDialog = !GuiWindowBox(popupBounds, "setup");
-			static char chan[33]; //0 inicialized becouse static, +1 for null byte
-			static char samp[33];
-			static char duration[33];
-			static bool chanEdit;
-			static bool sampEdit;
-			static bool duraEdit;
+		if (Mstate->gui.add.setupDialog) {
+			Mstate->gui.add.setupDialog = !GuiWindowBox(popupBounds, "setup");
 			Rectangle chanBound = popupScroll;
 			chanBound.height /= 4;
 
@@ -132,16 +121,16 @@ int main(void) {
 			duraInput.x += duraText.width;
 
 			GuiLabel(chanText, " number of channels:");
-			if(GuiTextBox(chanInput, chan, 32, chanEdit)){
-				chanEdit = !chanEdit;
+			if(GuiTextBox(chanInput, Mstate->gui.add.setup.chan, 32, Mstate->gui.add.setup.chanEdit)){
+				Mstate->gui.add.setup.chanEdit = !Mstate->gui.add.setup.chanEdit;
 			};
 			GuiLabel(sampText, " sample rate:");
-			if(GuiTextBox(sampInput, samp, 32, sampEdit)){
-				sampEdit = !sampEdit;
+			if(GuiTextBox(sampInput, Mstate->gui.add.setup.samp, 32, Mstate->gui.add.setup.sampEdit)){
+				Mstate->gui.add.setup.sampEdit = !Mstate->gui.add.setup.sampEdit;
 			};
 			GuiLabel(duraText, " duration:");
-			if(GuiTextBox(duraInput, duration, 32, duraEdit)){
-				duraEdit = !duraEdit;
+			if(GuiTextBox(duraInput, Mstate->gui.add.setup.duration, 32, Mstate->gui.add.setup.duraEdit)){
+				Mstate->gui.add.setup.duraEdit = !Mstate->gui.add.setup.duraEdit;
 			};
 
 			Rectangle sendBound = duraBound;
@@ -154,7 +143,7 @@ int main(void) {
 				unsigned int sampParsed = -1;	 
 				unsigned int duraParsed = -1;	 
 				std::vector<record::recorder *> vec;
-				if(sscanf(chan, "%ud",&chanParsed) != 1){
+				if(sscanf(Mstate->gui.add.setup.chan, "%ud",&chanParsed) != 1){
 					error = "invalid\n";
 					goto error;
 				}; 
@@ -163,7 +152,7 @@ int main(void) {
 					goto error;
 				}
 				conf.channels = (uint8_t) chanParsed;
-				if(sscanf(samp, "%ud",&sampParsed) != 1){
+				if(sscanf(Mstate->gui.add.setup.samp, "%ud",&sampParsed) != 1){
 					error = "invalid\n";
 					goto error;
 				}; 
@@ -172,7 +161,7 @@ int main(void) {
 					goto error;
 				}
 				conf.sampleRate = (uint32_t) sampParsed;
-				if(sscanf(duration, "%ud",&duraParsed) != 1){
+				if(sscanf(Mstate->gui.add.setup.duration, "%ud",&duraParsed) != 1){
 					error = "invalid\n";
 					goto error;
 				}; 
@@ -180,7 +169,7 @@ int main(void) {
 					error = "invalid\n";
 					goto error;
 				}
-				conf.sampleRate = (uint32_t) duraParsed;
+				conf.duration = (uint32_t) duraParsed;
 
 				devices::device *dev;
 				try{
@@ -196,24 +185,25 @@ int main(void) {
 				Mstate->devices->unlock();
 
 				Mstate->devices->rdlock();
-				for(int i = 0; i < conf.channels; i++) {
+				for(auto i: Mstate->devices->_data.back()->buffer) {
 					record::recorder *rec = new record::recorder(
-							new record::edgetriger(1.0, record::RISEING),
-							new record::edgetriger(1.0, record::FALEING),
-							Mstate->devices->_data.back()->buffer[i],
-							&Mstate->recordstate.state, (size_t)3200, 100000);
+							new record::nevertriger(),
+							new record::nevertriger(),
+							i,
+							&Mstate->recordstate.state, (size_t)conf.sampleRate*conf.duration, conf.sampleRate);
 					vec.push_back(rec);
 				}
 				Mstate->recordstate.recorders.push_back(vec);
 				Mstate->devices->unlock();
 
 error:
-				setupDialog = false;
+				Mstate->gui.add.setupDialog = false;
 				if (error != "") {
 					printf("error: %s\n", error.c_str());
 				}
 #warning remove this after after testing
 				connected = true;
+				printf("%d buffer size\n", conf.sampleRate*conf.duration);
 			};
 
 		}
@@ -227,41 +217,35 @@ error:
 				Mstate->recordstate.state = record::RECORED;
 			};
 		}
-		int len = Mstate->addrRoot.lenth();
-		char status[128] = {0};
-		snprintf(status, 128, "found %d dev\n", len);
-		GuiLabel((Rectangle){100, 0, 100, 100}, status);
-		if(len > 0) {
-			if(!connected) {
-				if(GuiButton((Rectangle){0, 0, 100, 100}, "connect")) {
-					struct esp::scopeConf conf = {
-						.channels = 1,
-						.sampleRate = 100000,
-						.duration = 80,
-					};
-					Mstate->addrRoot.nodes.wrlock();
-					auto addr= Mstate->addrRoot.nodes._data.front().addr;
-					Mstate->addrRoot.nodes.unlock();
-					devices::device *dev =
-						new devices::device(conf, &Mstate->addrRoot, &addr,
-								sizeof(struct sockaddr_in));
-					Mstate->devices->wrlock();
-					Mstate->devices->_data.push_back(dev);
-					Mstate->devices->unlock();
-					Mstate->devices->rdlock();
-					for(int i = 0; i < conf.channels; i++) {
-						record::recorder *rec = new record::recorder(
-								new record::edgetriger(1.0, record::RISEING),
-								new record::edgetriger(1.0, record::FALEING),
-								Mstate->devices->_data.back()->buffer[i],
-								&Mstate->recordstate.state, (size_t)3200, 100000);
-						std::vector<record::recorder *> vec = {rec};
-						Mstate->recordstate.recorders.push_back(vec);
-					}
-					Mstate->devices->unlock();
-					connected = true;
+		if(!connected) {
+			if(GuiButton((Rectangle){0, 0, 100, 100}, "connect")) {
+				struct esp::scopeConf conf = {
+					.channels = 1,
+					.sampleRate = 100000,
+					.duration = 80,
 				};
-			}
+				Mstate->addrRoot.nodes.wrlock();
+				auto addr= Mstate->addrRoot.nodes._data.front().addr;
+				Mstate->addrRoot.nodes.unlock();
+				devices::device *dev =
+					new devices::device(conf, &Mstate->addrRoot, &addr,
+							sizeof(struct sockaddr_in));
+				Mstate->devices->wrlock();
+				Mstate->devices->_data.push_back(dev);
+				Mstate->devices->unlock();
+				Mstate->devices->rdlock();
+				for(int i = 0; i < conf.channels; i++) {
+					record::recorder *rec = new record::recorder(
+							new record::edgetriger(1.0, record::RISEING),
+							new record::edgetriger(1.0, record::FALEING),
+							Mstate->devices->_data.back()->buffer[i],
+							&Mstate->recordstate.state, (size_t)3200, 100000);
+					std::vector<record::recorder *> vec = {rec};
+					Mstate->recordstate.recorders.push_back(vec);
+				}
+				Mstate->devices->unlock();
+				connected = true;
+			};
 		}
 		Texture2D graph;
 		if (!Mstate->recordstate.recorders.empty()){

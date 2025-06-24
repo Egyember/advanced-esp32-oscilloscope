@@ -74,11 +74,10 @@ void recorder::executor(recorder *thispointer) {
 	uint16_t readbuff[READBUFFERSIZE] = {0};
 	size_t read = 0;
 	while(true) {
-		std::chrono::microseconds start = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
+	//	std::chrono::microseconds start = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		read = thispointer->samplest->readBuffer((unsigned char *)readbuff, READBUFFERSIZE*sizeof(uint16_t));
-		unsigned long int period = (1000000/ thispointer->freq);
-		period *= read == 0? 10 : read;
+	//	period *= read == 0? 10 : read;
 		if(read != 0) {
 			for (int i = 0; i < read/sizeof(uint16_t); i++) {
 				auto samp = devices::parseSample(readbuff[i]);
@@ -96,15 +95,13 @@ void recorder::executor(recorder *thispointer) {
 				}
 
 			}
-		}
-		std::chrono::microseconds end = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-		std::chrono::microseconds delta = end - start;
-		delta = (std::chrono::microseconds) period - delta;
-		if (delta.count() > 0) {
-			usleep(delta.count() / 1000);
-		}else if (delta.count() != 0) {
-			printf("behind %lu µs\n", delta.count());
+		}else{
+
+			long int period = (1000000 / thispointer->freq);
+#ifdef NDEBUG
+			printf("sleep %ld\n", period);
+#endif
+			usleep(period);
 		}
 	}
 };
