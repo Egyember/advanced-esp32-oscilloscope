@@ -37,7 +37,6 @@ int main(void) {
 	SetTargetFPS(RefreshRate);
 	printf("width: %f, height: %f, refresh rate: %d, mointor count: %d\n", width, height, RefreshRate,
 	       monitorCount);
-	bool connected = false;
 	int samplelast = 0;
 	int lastdelta = 0;
 	int fcount = 0;
@@ -73,6 +72,16 @@ int main(void) {
 			Mstate->gui.add.addActive = -1;
 			Mstate->gui.add.addIndex = -1;
 		};
+		GuiButton(saveButton, "#2#");
+		if(Mstate->recordstate.state == record::RECORED) {
+			if (GuiButton(recordButton, "#132#")) {
+				Mstate->recordstate.state = record::STOP;
+			};
+		} else {
+			if (GuiButton(recordButton, "#131#")){
+				Mstate->recordstate.state = record::RECORED;
+			};
+		}
 		if(Mstate->gui.add.addDialog) {
 			Mstate->gui.add.addDialog = !GuiWindowBox(popupBounds, "add");
 			std::string addressed = "";
@@ -202,50 +211,9 @@ error:
 					printf("error: %s\n", error.c_str());
 				}
 #warning remove this after after testing
-				connected = true;
 				printf("%d buffer size\n", conf.sampleRate*conf.duration);
 			};
 
-		}
-		GuiButton(saveButton, "#2#");
-		if(Mstate->recordstate.state == record::RECORED) {
-			if (GuiButton(recordButton, "#132#")) {
-				Mstate->recordstate.state = record::STOP;
-			};
-		} else {
-			if (GuiButton(recordButton, "#131#")){
-				Mstate->recordstate.state = record::RECORED;
-			};
-		}
-		if(!connected) {
-			if(GuiButton((Rectangle){0, 0, 100, 100}, "connect")) {
-				struct esp::scopeConf conf = {
-					.channels = 1,
-					.sampleRate = 100000,
-					.duration = 80,
-				};
-				Mstate->addrRoot.nodes.wrlock();
-				auto addr= Mstate->addrRoot.nodes._data.front().addr;
-				Mstate->addrRoot.nodes.unlock();
-				devices::device *dev =
-					new devices::device(conf, &Mstate->addrRoot, &addr,
-							sizeof(struct sockaddr_in));
-				Mstate->devices->wrlock();
-				Mstate->devices->_data.push_back(dev);
-				Mstate->devices->unlock();
-				Mstate->devices->rdlock();
-				for(int i = 0; i < conf.channels; i++) {
-					record::recorder *rec = new record::recorder(
-							new record::edgetriger(1.0, record::RISEING),
-							new record::edgetriger(1.0, record::FALEING),
-							Mstate->devices->_data.back()->buffer[i],
-							&Mstate->recordstate.state, (size_t)3200, 100000);
-					std::vector<record::recorder *> vec = {rec};
-					Mstate->recordstate.recorders.push_back(vec);
-				}
-				Mstate->devices->unlock();
-				connected = true;
-			};
 		}
 		Texture2D graph;
 		if (!Mstate->recordstate.recorders.empty()){
