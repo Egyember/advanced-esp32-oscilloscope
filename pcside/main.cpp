@@ -85,7 +85,7 @@ int main(void) {
 			}
 			addressed = addressed.substr(0, addressed.size()-1);
 			GuiListView(popupScroll, addressed.c_str(), &Mstate->gui.add.addIndex, &Mstate->gui.add.addActive);
-			if (addActive != -1) {
+			if (Mstate->gui.add.addActive != -1) {
 				std::list<addrlist::addrllnode>::iterator it = Mstate->addrRoot.nodes._data.begin();
 				std::advance(it, Mstate->gui.add.addActive);
 				memcpy(&Mstate->gui.add.selectedAddress, &it->addr, sizeof(Mstate->gui.add.selectedAddress));
@@ -173,7 +173,7 @@ int main(void) {
 
 				devices::device *dev;
 				try{
-				dev = new devices::device(conf, &Mstate->addrRoot, &selectedAddress,
+				dev = new devices::device(conf, &Mstate->addrRoot, &Mstate->gui.add.selectedAddress,
 							sizeof(struct sockaddr_in));
 				}
 				catch (...){
