@@ -18,6 +18,11 @@ class state {
 	helper::thwraper<std::list<devices::device *>> *devices;
 	record::recorederstate recordstate;
 	struct {
+		Rectangle popupBounds = {0};
+		Rectangle popupScroll = {0};
+		float slider = 0;
+		bool folow = false;
+
 		struct {
 			bool addDialog = false;
 			int addIndex = -1;
@@ -37,4 +42,11 @@ class state {
 	}gui;
 };
 
+#warning todo: refactor this to use the struct everywhere
+union deviderpoint{
+	float array[2];
+	struct {
+		float x,y;
+	}cord;
+};
 #endif

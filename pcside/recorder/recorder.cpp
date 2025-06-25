@@ -81,18 +81,21 @@ void recorder::executor(recorder *thispointer) {
 		if(read != 0) {
 			for (int i = 0; i < read/sizeof(uint16_t); i++) {
 				auto samp = devices::parseSample(readbuff[i]);
-				if(*thispointer->recstate == RECORED) {
-					thispointer->buffer.wrlock();
-					thispointer->buffer._data.push_back(samp);
-					thispointer->buffer.unlock();
-					if(thispointer->stopTrig->shouldtrigger(samp)) {
-						*thispointer->recstate = STOP;
-					};
-				} else {
-					if(thispointer->startTrig->shouldtrigger(samp)) {
-						*thispointer->recstate = RECORED;
-					};
-				}
+				switch (*thispointer->recstate) {
+					case RECORED:
+						thispointer->buffer.wrlock();
+						thispointer->buffer._data.push_back(samp);
+						thispointer->buffer.unlock();
+						if(thispointer->stopTrig->shouldtrigger(samp)) {
+							*thispointer->recstate = STOP;
+						};
+						break;
+					case STOP:
+						if(thispointer->startTrig->shouldtrigger(samp)) {
+							*thispointer->recstate = RECORED;
+						};
+						break;
+				};
 
 			}
 		}else{
@@ -131,6 +134,7 @@ void recorder::clear() {
 	this->buffer.wrlock();
 	this->buffer._data.clear();
 	this->buffer.unlock();
+	this->samplest->clear();
 };
 
 recorederstate::recorederstate() { state = STOP; };
