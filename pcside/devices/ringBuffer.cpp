@@ -164,8 +164,8 @@ size_t ringbuffer::writeBuffer(unsigned char *src, size_t size) {
 		size_t newerindex = (writeindex + size) % maxindex;
 		if(!(newerindex < readindex && readindex < writeindex) && !empty) {
 			readindex = newerindex;
-#ifdef DEBUGRINGBUFFER
-	std::cout << "pushed read index (at overroll)\n";
+#if  defined(DEBUGRINGBUFFER)
+			std::cout << "pushed read index (at overroll)\n";
 #endif
 		}
 		memcpy(&_data->data()[writeindex], src, writeable);
@@ -193,4 +193,17 @@ void ringbuffer::clear(){
 	writeindex = 0;
 	empty = true;
 	pthread_mutex_unlock(&this->lock);
+};
+
+size_t ringbuffer::getUsed(){
+
+	size_t canread = 0;
+	size_t canreadsec = 0;
+	if(writeindex < readindex) {
+		canread = maxindex - readindex;
+		canreadsec = writeindex;
+	}else {
+		canread = writeindex - readindex;
+	}
+	return canread + canreadsec;
 };

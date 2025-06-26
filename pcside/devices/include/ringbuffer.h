@@ -19,6 +19,7 @@ namespace ringbuffers {
 			size_t readBuffer(unsigned char *dest, size_t size);
 			size_t writeBuffer(unsigned char *dest, size_t size);
 			void clear();
+			size_t getUsed();
 #ifdef DEBUGRINGBUFFER
 			int print();
 			int print(int hexwith);
