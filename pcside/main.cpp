@@ -39,9 +39,6 @@ int main(void) {
 	SetTargetFPS(RefreshRate);
 	printf("width: %f, height: %f, refresh rate: %d, mointor count: %d\n", width, height, RefreshRate,
 	       monitorCount);
-	int samplelast = 0;
-	int lastdelta = 0;
-	int fcount = 0;
 
 
 	while(!WindowShouldClose()) { // Detect window close button or ESC key
@@ -102,6 +99,9 @@ int main(void) {
 			auto front = Mstate->recordstate.recorders.front();
 			auto frontlen = front[0]->buffersize();
 			GuiSlider(slider, NULL, NULL, &Mstate->gui.slider, 0, frontlen);
+			if (Mstate->gui.folow) {
+				Mstate->gui.slider = frontlen;
+			}
 			std::vector<std::vector<samples::sample>> data;
 //todo: range based for loops dosn't allow for the final version
 			for (auto dev : Mstate->recordstate.recorders) {
@@ -112,9 +112,10 @@ int main(void) {
 			std::vector<Color> colors;
 			colors.push_back(WHITE);
 			graph = drawgraph(data, colors, deviderpoint.array[0], height - deviderpoint.array[1] - slider.height, 3.3, 0,
-					records.size() > 600 ? records.size() - 600 : 0,
-					records.size() > 600 ? records.size() : 600);
+					0,
+					2*Mstate->gui.zoom);
 			DrawTexture(graph, 0, deviderpoint.array[1], WHITE);
+			GuiCheckBox((Rectangle){0,0, 100, 100}, "folow", &Mstate->gui.folow);
 
 		};
 		
@@ -128,7 +129,6 @@ int main(void) {
 		}
 		EndDrawing();
 		UnloadTexture(graph);
-		fcount++;
 
 	};
 	CloseWindow(); // Close window and OpenGL context

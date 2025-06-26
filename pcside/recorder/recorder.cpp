@@ -118,7 +118,12 @@ std::vector<samples::sample> recorder::getRecords() {
 
 std::vector<samples::sample> recorder::getRecords(unsigned int start,unsigned int stop) {
 	this->buffer.rdlock();
-	std::vector<samples::sample> ret(this->buffer._data.begin()+start, this->buffer._data.begin()+stop);
+	auto s = this->buffer._data.size();
+	if (start > s) {
+		this->buffer.unlock();
+		return std::vector<samples::sample>{};
+	}
+	std::vector<samples::sample> ret(this->buffer._data.begin()+start, stop < s ? this->buffer._data.begin()+stop : this->buffer._data.end());
 	this->buffer.unlock();
 	return ret;
 };
