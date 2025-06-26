@@ -100,29 +100,21 @@ int main(void) {
 				.height =  height * 0.02f,
 			};
 			auto front = Mstate->recordstate.recorders.front();
-			auto recordlen = front[0]->buffersize();
-			auto records = front[0]->getRecords(recordlen - 600 > 0 ? recordlen - 600 : 0, recordlen);
-			std::string text = "";
-			text += "recorded: " + std::to_string(recordlen) + "\n";
-			text +=
-				"last value: " + std::to_string(((recordlen != 0) ? records.back().voltage : -1.0)) + "\n";
-			if(fcount >= RefreshRate) {
-				fcount = 0;
-				auto recnow = recordlen;
-				lastdelta = recnow - samplelast;
-				samplelast = recnow;
-			}
-			text += "sample rate: " + std::to_string(lastdelta) + "\n";
-			GuiLabel((Rectangle){200, 0, 200, 100}, text.data());
+			auto frontlen = front[0]->buffersize();
+			GuiSlider(slider, NULL, NULL, &Mstate->gui.slider, 0, frontlen);
 			std::vector<std::vector<samples::sample>> data;
-			data.push_back(records);
+//todo: range based for loops dosn't allow for the final version
+			for (auto dev : Mstate->recordstate.recorders) {
+				for (auto rec : dev) {
+					data.push_back(rec->getRecords((Mstate->gui.slider/*+offset*/)-Mstate->gui.zoom, (Mstate->gui.slider/*+offset*/)+Mstate->gui.zoom));
+				}
+			}
 			std::vector<Color> colors;
 			colors.push_back(WHITE);
 			graph = drawgraph(data, colors, deviderpoint.array[0], height - deviderpoint.array[1] - slider.height, 3.3, 0,
 					records.size() > 600 ? records.size() - 600 : 0,
 					records.size() > 600 ? records.size() : 600);
 			DrawTexture(graph, 0, deviderpoint.array[1], WHITE);
-			GuiSlider(slider, NULL, NULL, &Mstate->gui.slider, 0, recordlen);
 
 		};
 		

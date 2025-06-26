@@ -9,6 +9,7 @@
 #include <helpertypes.h>
 #include <recorder.h>
 #include <raylib.h>
+#include <vector>
 
 
 class state {
@@ -16,12 +17,15 @@ class state {
 		
 	addrlist::root addrRoot;
 	helper::thwraper<std::list<devices::device *>> *devices;
+	//todo: this needs a thwraper
 	record::recorederstate recordstate;
+	helper::thwraper<std::vector<std::vector<int>>> offsets;
 	struct {
 		Rectangle popupBounds = {0};
 		Rectangle popupScroll = {0};
 		float slider = 0;
 		bool folow = false;
+		float zoom = 300; 
 
 		struct {
 			bool addDialog = false;
