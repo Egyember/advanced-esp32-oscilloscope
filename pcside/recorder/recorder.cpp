@@ -74,37 +74,37 @@ void recorder::executor(recorder *thispointer) {
 	uint16_t readbuff[READBUFFERSIZE] = {0};
 	size_t read = 0;
 	while(true) {
-	//	std::chrono::microseconds start = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
+		std::chrono::microseconds start = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		read = thispointer->samplest->readBuffer((unsigned char *)readbuff, READBUFFERSIZE*sizeof(uint16_t));
-	//	period *= read == 0? 10 : read;
+		unsigned long int period = (1000000/ thispointer->freq);
+		period *= read == 0? 10 : read;
 		if(read != 0) {
 			for (int i = 0; i < read/sizeof(uint16_t); i++) {
 				auto samp = devices::parseSample(readbuff[i]);
-				switch (*thispointer->recstate) {
-					case RECORED:
-						thispointer->buffer.wrlock();
-						thispointer->buffer._data.push_back(samp);
-						thispointer->buffer.unlock();
-						if(thispointer->stopTrig->shouldtrigger(samp)) {
-							*thispointer->recstate = STOP;
-						};
-						break;
-					case STOP:
-						if(thispointer->startTrig->shouldtrigger(samp)) {
-							*thispointer->recstate = RECORED;
-						};
-						break;
-				};
+				if(*thispointer->recstate == RECORED) {
+					thispointer->buffer.wrlock();
+					thispointer->buffer._data.push_back(samp);
+					thispointer->buffer.unlock();
+					if(thispointer->stopTrig->shouldtrigger(samp)) {
+						*thispointer->recstate = STOP;
+					};
+				} else {
+					if(thispointer->startTrig->shouldtrigger(samp)) {
+						*thispointer->recstate = RECORED;
+					};
+				}
 
 			}
-		}else{
-
-			long int period = (1000000 / thispointer->freq);
-#ifdef NDEBUG
-			printf("sleep %ld\n", period);
-#endif
-			usleep(period);
+		}
+		std::chrono::microseconds end = std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::system_clock::now().time_since_epoch());
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+		std::chrono::microseconds delta = end - start;
+		delta = (std::chrono::microseconds) period - delta;
+		if (delta.count() > 0) {
+			usleep(delta.count() / 1000);
+		}else if (delta.count() != 0) {
+			printf("behind %lu µs\n", delta.count());
 		}
 	}
 };
@@ -118,12 +118,7 @@ std::vector<samples::sample> recorder::getRecords() {
 
 std::vector<samples::sample> recorder::getRecords(unsigned int start,unsigned int stop) {
 	this->buffer.rdlock();
-	auto s = this->buffer._data.size();
-	if (start > s) {
-		this->buffer.unlock();
-		return std::vector<samples::sample>{};
-	}
-	std::vector<samples::sample> ret(this->buffer._data.begin()+start, stop < s ? this->buffer._data.begin()+stop : this->buffer._data.end());
+	std::vector<samples::sample> ret(this->buffer._data.begin()+start, this->buffer._data.begin()+stop);
 	this->buffer.unlock();
 	return ret;
 };
@@ -139,7 +134,6 @@ void recorder::clear() {
 	this->buffer.wrlock();
 	this->buffer._data.clear();
 	this->buffer.unlock();
-	this->samplest->clear();
 };
 
 recorederstate::recorederstate() { state = STOP; };

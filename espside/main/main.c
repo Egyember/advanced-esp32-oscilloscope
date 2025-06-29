@@ -106,7 +106,7 @@ void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, 
 			xSemaphoreTake(localIp->lock, portMAX_DELAY);
 			localIp->ip = event->ip_info.ip.addr;
 			localIp->mask = event->ip_info.netmask.addr;
-			xTaskCreate(broadcaster, "broadcaster", 1024 * 2, localIp, tskIDLE_PRIORITY+1,
+			xTaskCreate(broadcaster, "broadcaster", 1024 * 2, localIp, tskIDLE_PRIORITY,
 				    &(localIp->broadcaster));
 			xSemaphoreGive(localIp->lock);
 			xEventGroupSetBits(wifi_eventGroup, WIFIDONEBIT);
@@ -300,17 +300,17 @@ void app_main(void) {
 		ESP_ERROR_CHECK(i2s_set_adc_mode(ADC_UNIT_1, ADC1_CHANNEL_0));
 
 		const static uint8_t channelConfig[] = {ADC_CHANNEL_0, ADC_CHANNEL_3,ADC_CHANNEL_4,ADC_CHANNEL_5};
-		// ADC setting
-		struct patternTableEntry *patterns = (struct patternTableEntry *)APB_CTRL_APB_SARADC_SAR1_PATT_TAB1_REG;
+    // ADC setting
+    struct patternTableEntry *patterns = (struct patternTableEntry *)APB_CTRL_APB_SARADC_SAR1_PATT_TAB1_REG;
 		for (int i = 0; i<4; i++) {
 			patterns[i].atten = ADC_ATTEN_DB_12; //150 mV ~ 2450 mV
 			patterns[i].ch_sel = channelConfig[i];
 			patterns[i].bit_width = 0b11;//ADC_BITWIDTH_12; //max selected by default
 		};
-		SYSCON.saradc_ctrl.sar1_patt_len =  config.channels<4 ?config.channels -1 : 0;
-		if (config.channels>4){
-			ESP_LOGE(MAIN_TAG, "channels more than 4 not implemented");
-		};
+    SYSCON.saradc_ctrl.sar1_patt_len =  config.channels<4 ?config.channels -1 : 0;
+    if (config.channels>4){
+	    ESP_LOGE(MAIN_TAG, "channels more than 4 not implemented");
+    };
 		ESP_ERROR_CHECK(i2s_adc_enable(I2S_NUM_0));
 
 		// delay for I2S bug workaround
@@ -329,8 +329,8 @@ void app_main(void) {
 		size_t readData;
 		ESP_LOGI(MAIN_TAG, "sending data");
 		do{
-			ESP_ERROR_CHECK(i2s_read(I2S_NUM_0, readbuffer, sizeof(uint8_t)*frameSize, &readData, portMAX_DELAY));
-	//		ESP_LOGI(MAIN_TAG, "read %d bytes", readData);
+ESP_ERROR_CHECK(i2s_read(I2S_NUM_0, readbuffer, sizeof(uint8_t)*frameSize, &readData, portMAX_DELAY));
+			ESP_LOGI(MAIN_TAG, "read %d bytes", readData);
 		}while(write(fd, readbuffer, readData)>=0);
 		ESP_LOGE(MAIN_TAG, "connection falied");
 		free(readbuffer);
