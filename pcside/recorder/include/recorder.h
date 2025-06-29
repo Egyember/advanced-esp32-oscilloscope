@@ -6,7 +6,7 @@
 #include <samples.h>
 #include <vector>
 namespace record {
-enum states { RECORED, STOP };
+enum states { RECORED, STOP};
 
 class triger {
       public:
