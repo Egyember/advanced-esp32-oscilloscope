@@ -33,6 +33,7 @@
 #endif
 #ifdef DEBUGSAMPLE
 #include <bitset>
+#include <helpertypes.h>
 #endif
 
 #include <helpertypes.h>
@@ -59,19 +60,26 @@ void *devices::device::readerfunc(devices::device *dev) {
 	unsigned char *tempBuffer = new unsigned char[(int)std::floor(
 	    dev->config.sampleRate * ((double)dev->config.duration / 1000.0) * dev->config.channels)];
 	while(true) {
+#warning this is broken af
 		int readedData = read(dev->fd, tempBuffer,
 				      (int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) *
 						      dev->config.channels));
 		for (int i = 0; i < readedData/2; i += 1) {
-			uint16_t *s = &((uint16_t*)tempBuffer)[i];
-			uint16_t chan = (*s & CHANMASK) >> 12;
+			uint16_t s = ((uint16_t*)tempBuffer)[i];
+
+#ifdef DEBUGREAD
+	std::cout << "got sample form "<< s<<"\n";
+	helper::hexdump((unsigned char *)&s, sizeof(uint16_t));
+#endif
+			uint16_t chan = (s & CHANMASK) >> 12;
 			if (chan >= 0 && chan <= dev->config.channels-1) {
-				dev->buffer[chan]->writeBuffer((unsigned char *)s, sizeof(uint16_t));
+				dev->buffer[chan]->writeBuffer((unsigned char *)&s, sizeof(uint16_t));
 			}else {
 #ifdef DEBUGREAD
 	std::cout << "hw bug detected\n";
 #endif
 			}
+
 		
 		}
 	}
