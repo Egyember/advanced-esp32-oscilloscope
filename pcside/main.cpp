@@ -71,7 +71,10 @@ int main(void) {
 			Mstate->gui.add.addActive = -1;
 			Mstate->gui.add.addIndex = -1;
 		};
+		// save button
 		GuiButton(saveButton, "#2#");
+
+		// start stop button
 		if(Mstate->recordstate.state == record::RECORED) {
 			if (GuiButton(recordButton, "#132#")) {
 				Mstate->recordstate.state = record::STOP;
@@ -81,6 +84,8 @@ int main(void) {
 				Mstate->recordstate.state = record::RECORED;
 			};
 		}
+
+		// clear button
 		if(GuiButton(clearButton, "#143#")) {
 			for (auto d : Mstate->recordstate.recorders) {
 				for (auto r: d) {
@@ -88,6 +93,39 @@ int main(void) {
 				}
 			}
 		};
+		
+		Rectangle graphTools = {
+			.x =0,
+			.y = 0,
+			.width = deviderpoint.cord.x,
+			.height = deviderpoint.cord.y,
+		};
+		Rectangle followBound = graphTools;
+		followBound.width = followBound.height + MeasureText("folow", GuiGetStyle(DEFAULT, TEXT_SIZE)) + 3*GuiGetStyle(DEFAULT, TEXT_SPACING);
+
+
+		Rectangle checkboxBound = followBound;
+		checkboxBound.x = checkboxBound.x+checkboxBound.width*0.10f;
+		checkboxBound.y = checkboxBound.y+checkboxBound.height*0.10f;
+		checkboxBound.height *= 0.8f;
+		checkboxBound.width = checkboxBound.height;
+
+
+		Rectangle zoomBound = graphTools;
+		zoomBound.x += followBound.width;
+		zoomBound.width -= followBound.width;
+
+		Rectangle xzoomBound = zoomBound;
+		xzoomBound.height *= 0.5f;
+
+		Rectangle yzoomBound = xzoomBound;
+		yzoomBound.y += yzoomBound.height;
+
+
+		GuiCheckBox(checkboxBound, "folow", &Mstate->gui.folow);
+		GuiSliderBar(xzoomBound, "x zoom", NULL, &Mstate->gui.xzoom, 0, 1000.0f);
+		GuiSliderBar(yzoomBound, "y zoom", NULL, &Mstate->gui.yzoom, 0, 3.3f);
+
 		Texture2D graph;
 		if (!Mstate->recordstate.recorders.empty()){
 			Rectangle slider = {
@@ -98,24 +136,30 @@ int main(void) {
 			};
 			auto front = Mstate->recordstate.recorders.front();
 			auto frontlen = front[0]->buffersize();
-			GuiSlider(slider, NULL, NULL, &Mstate->gui.slider, 0, frontlen);
+			//scroll
+			if (IsKeyDown(KEY_LEFT_CONTROL)) {
+				Mstate->gui.xposition += (GetMouseWheelMove()*Mstate->gui.scrollSpeed);
+			}else {
+				Mstate->gui.yposition += (GetMouseWheelMove()*Mstate->gui.scrollSpeed);
+			}
+			GuiSlider(slider, NULL, NULL, &Mstate->gui.xposition, 0, frontlen);
 			if (Mstate->gui.folow) {
-				Mstate->gui.slider = frontlen;
+				Mstate->gui.xposition = frontlen;
 			}
 			std::vector<std::vector<samples::sample>> data;
 //todo: range based for loops dosn't allow for the final version
 			for (auto dev : Mstate->recordstate.recorders) {
 				for (auto rec : dev) {
-					data.push_back(rec->getRecords((Mstate->gui.slider/*+offset*/)-Mstate->gui.zoom, (Mstate->gui.slider/*+offset*/)+Mstate->gui.zoom));
+					data.push_back(rec->getRecords((Mstate->gui.xposition/*+offset*/)-Mstate->gui.xzoom, (Mstate->gui.xposition/*+offset*/)+Mstate->gui.xzoom));
 				}
 			}
 			std::vector<Color> colors;
 			colors.push_back(WHITE);
-			graph = drawgraph(data, colors, deviderpoint.array[0], height - deviderpoint.array[1] - slider.height, 3.3, 0,
+			colors.push_back(RED);
+			graph = drawgraph(data, colors, deviderpoint.array[0], height - deviderpoint.array[1] - slider.height, Mstate->gui.yposition+Mstate->gui.yzoom, Mstate->gui.yposition-Mstate->gui.yzoom,
 					0,
-					2*Mstate->gui.zoom);
+					2*Mstate->gui.xzoom);
 			DrawTexture(graph, 0, deviderpoint.array[1], WHITE);
-			GuiCheckBox((Rectangle){0,0, 100, 100}, "folow", &Mstate->gui.folow);
 
 		};
 		

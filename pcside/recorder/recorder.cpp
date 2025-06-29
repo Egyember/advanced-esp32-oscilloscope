@@ -121,6 +121,7 @@ std::vector<samples::sample> recorder::getRecords(unsigned int start,unsigned in
 	auto s = this->buffer._data.size();
 	if (start > s) {
 		this->buffer.unlock();
+#warning todo: remove this hack
 		return std::vector<samples::sample>{};
 	}
 	std::vector<samples::sample> ret(this->buffer._data.begin()+start, stop < s ? this->buffer._data.begin()+stop : this->buffer._data.end());

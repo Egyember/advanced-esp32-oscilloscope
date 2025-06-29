@@ -23,9 +23,12 @@ class state {
 	struct {
 		Rectangle popupBounds = {0};
 		Rectangle popupScroll = {0};
-		float slider = 0;
+		float xposition = 0;
+		float yposition = 3.3/2;
 		bool folow = false;
-		float zoom = 300; 
+		float xzoom = 300; 
+		float yzoom = 3.3/2; 
+		float scrollSpeed = 4;
 
 		struct {
 			bool addDialog = false;
