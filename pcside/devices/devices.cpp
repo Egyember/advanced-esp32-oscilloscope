@@ -58,54 +58,24 @@ void *devices::device::readerfunc(devices::device *dev) {
 #endif
 	unsigned char *tempBuffer = new unsigned char[(int)std::floor(
 	    dev->config.sampleRate * ((double)dev->config.duration / 1000.0) * dev->config.channels)];
-	std::vector<unsigned char *> prechanbuffs;
-	std::vector<size_t> perchanbuffoffset;
-	for(int i = 0; i < dev->config.channels; i++) {
-		prechanbuffs.push_back(new unsigned char[(
-		    int)(std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0)))]);
-		perchanbuffoffset.push_back(0);
-	}
-	uint8_t lastchannel = 0;
 	while(true) {
 		int readedData = read(dev->fd, tempBuffer,
 				      (int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) *
 						      dev->config.channels));
+		for (int i = 0; i < readedData/2; i += 1) {
+			uint16_t *s = &((uint16_t*)tempBuffer)[i];
+			uint16_t chan = (*s & CHANMASK) >> 12;
+			if (chan >= 0 && chan <= dev->config.channels-1) {
+				dev->buffer[chan]->writeBuffer((unsigned char *)s, sizeof(uint16_t));
+			}else {
 #ifdef DEBUGREAD
-		std::cout << "read from dev " << readedData << " bytes.\n";
-		helper::hexdump(tempBuffer, readedData);
+	std::cout << "hw bug detected\n";
 #endif
-		if(readedData < 0) {
-			printf("read failed\n");
-			break;
-		};
-
-		if(readedData == 0) {
-#ifdef DEBUGREAD
-			std::cout << "read 0 bytes\n";
-#endif
-			sleep(1);
-			continue;
-		};
-		// memcopy?
-		for(int i = 0; i < readedData; i++) {
-			if(lastchannel > (dev->config.channels - 1)) {
-				lastchannel = 0;
 			}
-			prechanbuffs[lastchannel][perchanbuffoffset[lastchannel]++] = tempBuffer[i]; //
-			lastchannel++;
-		}
-		for(int i = 0; i < dev->config.channels; i++) {
-			dev->buffer[i]->writeBuffer(prechanbuffs[i], perchanbuffoffset[i]);
-		}
-		for(int i = 0; i < dev->config.channels; i++) {
-			perchanbuffoffset[i] = 0;
+		
 		}
 	}
 	delete[] tempBuffer;
-
-	for(int i = 0; i < dev->config.channels; i++) {
-		prechanbuffs.clear();
-	}
 	return NULL;
 };
 
