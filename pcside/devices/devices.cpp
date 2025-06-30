@@ -64,6 +64,11 @@ void *devices::device::readerfunc(devices::device *dev) {
 		int readedData = read(dev->fd, tempBuffer,
 				      (int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) *
 						      dev->config.channels));
+
+#ifdef DEBUGREAD
+	helper::hexdump((unsigned char *)tempBuffer, readedData);
+
+#endif
 		for (int i = 0; i < readedData/2; i += 1) {
 			uint16_t s = tempBuffer[i];
 
@@ -71,7 +76,6 @@ void *devices::device::readerfunc(devices::device *dev) {
 
 #ifdef DEBUGREAD
 	std::cout << "got sample form "<< chan<<"\n";
-	helper::hexdump((unsigned char *)&s, sizeof(uint16_t));
 #endif
 			if (chan >= 0 && chan <= dev->config.channels-1) {
 				dev->buffer[chan]->writeBuffer((unsigned char *)&s, sizeof(uint16_t));
