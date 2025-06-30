@@ -454,10 +454,11 @@ void app_main(void) {
 			adc1_pattern[i].atten = DIG_ADC_ATTEN_DEFUALT;
 			adc1_pattern[i].bit_width = DIG_ADC_BIT_WIDTH_DEFUALT;
 			adc1_pattern[i].channel = channelConfig[i];
-			dig_cfg.adc1_pattern_len = config.channels;
-			dig_cfg.adc1_pattern = adc1_pattern;
 			adc_common_gpio_init(ADC_UNIT_1, channelConfig[i]);
 		} 
+
+		dig_cfg.adc1_pattern_len = config.channels;
+		dig_cfg.adc1_pattern = adc1_pattern;
 		ADC_ENTER_CRITICAL();
 		adc_ll_digi_set_fsm_time(ADC_LL_FSM_RSTB_WAIT_DEFAULT, ADC_LL_FSM_START_WAIT_DEFAULT,
 				ADC_LL_FSM_STANDBY_WAIT_DEFAULT);
