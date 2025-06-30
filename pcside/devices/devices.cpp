@@ -57,7 +57,7 @@ void *devices::device::readerfunc(devices::device *dev) {
 #ifdef DEBUGREAD
 	std::cout << "readerfunc started\n";
 #endif
-	unsigned char *tempBuffer = new unsigned char[(int)std::floor(
+	uint16_t *tempBuffer = new uint16_t[(int)std::floor(
 	    dev->config.sampleRate * ((double)dev->config.duration / 1000.0) * dev->config.channels)];
 	while(true) {
 #warning this is broken af
@@ -65,13 +65,14 @@ void *devices::device::readerfunc(devices::device *dev) {
 				      (int)std::floor(dev->config.sampleRate * ((double)dev->config.duration / 1000.0) *
 						      dev->config.channels));
 		for (int i = 0; i < readedData/2; i += 1) {
-			uint16_t s = ((uint16_t*)tempBuffer)[i];
+			uint16_t s = tempBuffer[i];
+
+			uint16_t chan = (s & CHANMASK) >> 12;
 
 #ifdef DEBUGREAD
-	std::cout << "got sample form "<< s<<"\n";
+	std::cout << "got sample form "<< chan<<"\n";
 	helper::hexdump((unsigned char *)&s, sizeof(uint16_t));
 #endif
-			uint16_t chan = (s & CHANMASK) >> 12;
 			if (chan >= 0 && chan <= dev->config.channels-1) {
 				dev->buffer[chan]->writeBuffer((unsigned char *)&s, sizeof(uint16_t));
 			}else {

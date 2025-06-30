@@ -156,6 +156,7 @@ int main(void) {
 			std::vector<Color> colors;
 			colors.push_back(WHITE);
 			colors.push_back(RED);
+			colors.push_back(BLUE);
 			graph = drawgraph(data, colors, deviderpoint.array[0], height - deviderpoint.array[1] - slider.height, Mstate->gui.yposition+Mstate->gui.yzoom, Mstate->gui.yposition-Mstate->gui.yzoom,
 					0,
 					2*Mstate->gui.xzoom);
