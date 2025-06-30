@@ -465,8 +465,7 @@ void app_main(void) {
 		adc_ll_set_sample_cycle(ADC_LL_SAMPLE_CYCLE_DEFAULT);
 		adc_ll_pwdet_set_cct(ADC_LL_PWDET_CCT_DEFAULT);
 		adc_ll_digi_output_invert(ADC_UNIT_1, ADC_LL_DIGI_DATA_INVERT_DEFAULT(ADC_UNIT_1));
-		adc_ll_digi_output_invert(ADC_UNIT_2, ADC_LL_DIGI_DATA_INVERT_DEFAULT(ADC_UNIT_2));
-		adc_ll_digi_set_clk_div(ADC_LL_DIGI_SAR_CLK_DIV_DEFAULT);
+		adc_ll_digi_set_clk_div(ADC_LL_DIGI_SAR_CLK_DIV_DEFAULT*2);
 		adc_digi_controller_reg_set(&dig_cfg);
 		ADC_EXIT_CRITICAL();
 
