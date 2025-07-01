@@ -444,20 +444,20 @@ void app_main(void) {
 		};
 		*/
 
-		adc_digi_pattern_table_t adc1_pattern[config.channels];
+		adc_digi_pattern_table_t adc1_pattern[4];
 		adc_digi_config_t dig_cfg = {
 			.format = DIG_ADC_OUTPUT_FORMAT_DEFUALT,
 			.conv_mode = ADC_CONV_SINGLE_UNIT_1,
 		};
 
-		for (int i = 0; i< config.channels; i++) {
+		for (int i = 0; i< 4; i++) {
 			adc1_pattern[i].atten = DIG_ADC_ATTEN_DEFUALT;
 			adc1_pattern[i].bit_width = DIG_ADC_BIT_WIDTH_DEFUALT;
 			adc1_pattern[i].channel = channelConfig[i];
 			adc_common_gpio_init(ADC_UNIT_1, channelConfig[i]);
 		} 
 
-		dig_cfg.adc1_pattern_len = config.channels;
+		dig_cfg.adc1_pattern_len = config.channels <5 ? config.channels : 1;
 		dig_cfg.adc1_pattern = adc1_pattern;
 		ADC_ENTER_CRITICAL();
 		adc_ll_digi_set_fsm_time(ADC_LL_FSM_RSTB_WAIT_DEFAULT, ADC_LL_FSM_START_WAIT_DEFAULT,
@@ -465,7 +465,6 @@ void app_main(void) {
 		adc_ll_set_sample_cycle(ADC_LL_SAMPLE_CYCLE_DEFAULT);
 		adc_ll_pwdet_set_cct(ADC_LL_PWDET_CCT_DEFAULT);
 		adc_ll_digi_output_invert(ADC_UNIT_1, ADC_LL_DIGI_DATA_INVERT_DEFAULT(ADC_UNIT_1));
-		adc_ll_digi_output_invert(ADC_UNIT_2, ADC_LL_DIGI_DATA_INVERT_DEFAULT(ADC_UNIT_2));
 		adc_ll_digi_set_clk_div(ADC_LL_DIGI_SAR_CLK_DIV_DEFAULT);
 		adc_digi_controller_reg_set(&dig_cfg);
 		ADC_EXIT_CRITICAL();
